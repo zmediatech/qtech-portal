@@ -27,14 +27,14 @@ type FormSlot = {
 type Class = { _id: string; name: string; code?: string };
 type Subject = { _id: string; name: string; code?: string };
 
-interface SlotFormProps {
+interface SubjectFormProps {
   slot?: FormSlot;
   onSubmit: (data: any) => Promise<void>;
 }
 
 const DAYS_OF_WEEK = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
-export function SlotForm({ slot, onSubmit }: SlotFormProps) {
+export function SubjectForm({ slot, onSubmit }: SubjectFormProps) {
   const [formData, setFormData] = useState<FormSlot>({
     day: "",
     startTime: "",
