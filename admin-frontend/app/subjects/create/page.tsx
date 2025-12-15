@@ -29,7 +29,7 @@ export default function CreateSubjectPage() {
     }
 
     // ✅ After success, redirect to subjects list
-    router.push("/admin/subjects");
+    router.push("/subjects");
   };
 
   return (
