@@ -1,274 +1,207 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { AlertCircle, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
 
-type FormSlot = {
-  _id?: string;
-  day: string;
-  startTime: string;
-  endTime: string;
-  delivery?: "room" | "online";
-  location?: { room?: string; link?: string };
-  class: string;
-  subject: string;
-  instructorName?: string;
+/* ================= TYPES ================= */
+
+type Class = {
+  _id: string;
+  name: string;
+  code?: string;
 };
 
-type Class = { _id: string; name: string; code?: string };
-type Subject = { _id: string; name: string; code?: string };
+type SubjectFormData = {
+  _id?: string;
+  name: string;
+  code: string;
+  linkedClasses: string[];
+};
 
 interface SubjectFormProps {
-  slot?: FormSlot;
-  onSubmit: (data: any) => Promise<void>;
+  subject?: SubjectFormData;
+  onSubmit: (data: SubjectFormData) => Promise<void>;
 }
 
-const DAYS_OF_WEEK = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+/* ================= COMPONENT ================= */
 
-export function SubjectForm({ slot, onSubmit }: SubjectFormProps) {
-  const [formData, setFormData] = useState<FormSlot>({
-    day: "",
-    startTime: "",
-    endTime: "",
-    delivery: "room",
-    location: { room: "", link: "" },
-    class: "",
-    subject: "",
-    instructorName: "",
-    ...slot,
+export function SubjectForm({ subject, onSubmit }: SubjectFormProps) {
+  const [formData, setFormData] = useState<SubjectFormData>({
+    name: "",
+    code: "",
+    linkedClasses: [],
+    ...subject,
   });
 
   const [classes, setClasses] = useState<Class[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load classes and subjects
+  /* ================= LOAD CLASSES ================= */
+
   useEffect(() => {
-    const loadData = async () => {
+    const loadClasses = async () => {
       try {
         setLoadingData(true);
-        setApiError(null);
-
-        const [classesRes, subjectsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/classes`),
-          fetch(`${API_BASE}/api/subjects`),
-        ]);
-
-        const classesJson = await classesRes.json();
-        const subjectsJson = await subjectsRes.json();
-
-        if (Array.isArray(classesJson.data)) setClasses(classesJson.data);
-        if (Array.isArray(subjectsJson.data)) setSubjects(subjectsJson.data);
-
-      } catch (error: any) {
-        setApiError(error.message || "Failed to load form data");
+        const res = await fetch(`${API_BASE}/api/classes`);
+        const data = await res.json();
+        setClasses(Array.isArray(data) ? data : data.data || []);
+      } catch (err: any) {
+        setError("Failed to load classes");
       } finally {
         setLoadingData(false);
       }
     };
 
-    loadData();
+    loadClasses();
   }, []);
+
+  /* ================= HANDLERS ================= */
+
+  const toggleClass = (classId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      linkedClasses: prev.linkedClasses.includes(classId)
+        ? prev.linkedClasses.filter((id) => id !== classId)
+        : [...prev.linkedClasses, classId],
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.class || !formData.subject || !formData.day || !formData.startTime || !formData.endTime) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    if (formData.delivery === "room" && !formData.location?.room?.trim()) {
-      alert("Please provide a room number");
-      return;
-    }
-
-    if (formData.delivery === "online" && !formData.location?.link?.trim()) {
-      alert("Please provide a meeting link");
+    if (!formData.name.trim() || !formData.code.trim()) {
+      setError("Name and Code are required");
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
 
-      const payload: any = {
-        day: formData.day,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        class: formData.class,
-        subject: formData.subject,
-        instructorName: formData.instructorName?.trim() || "",
-        location: {
-          room: formData.delivery === "room" ? (formData.location?.room?.trim() || "") : "",
-          link: formData.delivery === "online" ? (formData.location?.link?.trim() || "") : "",
-        },
-      };
-
-      await onSubmit(payload);
+      await onSubmit({
+        name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase(),
+        linkedClasses: formData.linkedClasses,
+      });
+    } catch (err: any) {
+      setError(err.message || "Failed to save subject");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= UI ================= */
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{slot?._id ? "Edit" : "Create"} Time Slot</CardTitle>
+        <CardTitle>
+          {subject?._id ? "Edit Subject" : "Create Subject"}
+        </CardTitle>
         <CardDescription>
-          {slot?._id ? "Update the time slot details" : "Add a new time slot to the timetable"}
+          Manage subject details and linked classes
         </CardDescription>
       </CardHeader>
+
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Day */}
+          {/* Subject Name */}
           <div className="space-y-2">
-            <Label htmlFor="day">Day *</Label>
-            <Select value={formData.day} onValueChange={(v) => setFormData({ ...formData, day: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select day" />
-              </SelectTrigger>
-              <SelectContent>
-                {DAYS_OF_WEEK.map((day) => (
-                  <SelectItem key={day} value={day}>
-                    {day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Time Range */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startTime">Start Time *</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="endTime">End Time *</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Class */}
-          <div>
-            <Label htmlFor="class">Class *</Label>
-            <Select
-              value={formData.class}
-              onValueChange={(v) => setFormData({ ...formData, class: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select class" />
-              </SelectTrigger>
-              <SelectContent>
-                {classes.map((cls) => (
-                  <SelectItem key={cls._id} value={cls._id}>
-                    {cls.code ? `${cls.code} - ` : ""}{cls.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Subject */}
-          <div>
-            <Label htmlFor="subject">Subject *</Label>
-            <Select
-              value={formData.subject}
-              onValueChange={(v) => setFormData({ ...formData, subject: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select subject" />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((sub) => (
-                  <SelectItem key={sub._id} value={sub._id}>
-                    {sub.code ? `${sub.code} - ` : ""}{sub.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Delivery Method */}
-          <div>
-            <Label>Delivery Method</Label>
-            <RadioGroup
-              value={formData.delivery}
-              onValueChange={(v) => setFormData({ ...formData, delivery: v as "room" | "online" })}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="room" id="room" />
-                <Label htmlFor="room">In-Person</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="online" id="online" />
-                <Label htmlFor="online">Online</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Location */}
-          {formData.delivery === "room" ? (
-            <div>
-              <Label htmlFor="room">Room *</Label>
-              <Input
-                id="room"
-                value={formData.location?.room || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: { ...formData.location, room: e.target.value } })
-                }
-              />
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="link">Link *</Label>
-              <Input
-                id="link"
-                type="url"
-                value={formData.location?.link || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: { ...formData.location, link: e.target.value } })
-                }
-              />
-            </div>
-          )}
-
-          {/* Instructor Name */}
-          <div>
-            <Label htmlFor="instructorName">Instructor Name</Label>
+            <Label>Subject Name *</Label>
             <Input
-              id="instructorName"
-              value={formData.instructorName || ""}
-              onChange={(e) => setFormData({ ...formData, instructorName: e.target.value })}
-              placeholder="Dr. John Doe"
+              placeholder="Mathematics"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
             />
           </div>
 
+          {/* Subject Code */}
+          <div className="space-y-2">
+            <Label>Subject Code *</Label>
+            <Input
+              placeholder="MATH101"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  code: e.target.value.toUpperCase(),
+                })
+              }
+            />
+          </div>
+
+          {/* Linked Classes */}
+          <div className="space-y-2">
+            <Label>Linked Classes</Label>
+
+            {loadingData ? (
+              <p className="text-sm text-muted-foreground">
+                Loading classes...
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {classes.map((cls) => (
+                  <label
+                    key={cls._id}
+                    className="flex items-center gap-2 border rounded-md p-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.linkedClasses.includes(cls._id)}
+                      onChange={() => toggleClass(cls._id)}
+                    />
+                    <span>
+                      {cls.code ? `${cls.code} - ` : ""}
+                      {cls.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <Button type="submit" disabled={loading}>
-            {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : slot?._id ? "Update Slot" : "Create Slot"}
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : subject?._id ? (
+              "Update Subject"
+            ) : (
+              "Create Subject"
+            )}
           </Button>
         </form>
       </CardContent>
