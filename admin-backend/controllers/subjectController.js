@@ -1,5 +1,5 @@
 // controllers/subjectController.js
-const Subject = require('../models/subject');
+const Subject = require('../models/Subject');
 
 // Read All (R)
 async function getAllSubjects(req, res) {

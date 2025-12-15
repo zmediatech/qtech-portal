@@ -1,6 +1,6 @@
 // controllers/metricsController.js
 const Student = require("../models/Student");
-const FeeRecord = require("../models/feeRecord");
+const FeeRecord = require("../models/FeeRecord");
 const Expense = require("../models/Expense");
 
 // Month labels like ["Apr","May","Jun","Jul","Aug","Sep"]
