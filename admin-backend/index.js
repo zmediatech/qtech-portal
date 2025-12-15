@@ -7,13 +7,13 @@ const morgan = require("morgan");
 const connectDB = require("./config/db");
 
 // --- Register Mongoose models once
-require("./models/subject");
+require("./models/Subject");
 require("./models/Class");
 require("./models/Student");
 require("./models/TimetableSlot");
 require("./models/Attendance");
 require("./models/Exam");
-require("./models/feeRecord");
+require("./models/FeeRecord");
 require("./models/Expense");
 require("./models/Mark");
 require("./models/User");
