@@ -71,7 +71,7 @@ export default function SubjectsPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-      const res = await fetch(`${API_BASE}/api/subjects`, {
+      const res = await fetch(`${API_BASE}api/subjects`, {
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         signal: controller.signal,
@@ -114,7 +114,7 @@ export default function SubjectsPage() {
     try {
       setDeleting(true)
 
-      const res = await fetch(`${API_BASE}/api/subjects/${deleteId}`, {
+      const res = await fetch(`${API_BASE}api/subjects/${deleteId}`, {
         method: "DELETE",
       })
 
