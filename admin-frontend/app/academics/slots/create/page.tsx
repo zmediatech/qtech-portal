@@ -7,7 +7,7 @@ import { AdminLayout } from "@/components/admin-layout";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:5000";
+  "https://qtech-backend.vercel.app";
 
 export default function CreateSlotPage() {
   const router = useRouter();

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 
-const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 function withApiBase(base: string) {
   const clean = base.replace(/\/+$/, "");
   return /\/api$/i.test(clean) ? clean : `${clean}/api`;

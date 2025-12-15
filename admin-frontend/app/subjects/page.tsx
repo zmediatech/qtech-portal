@@ -28,7 +28,7 @@ type Subject = {
   __v?: number
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app"
 
 export default function SubjectsPage() {
   const [mounted, setMounted] = useState(false)

@@ -135,7 +135,7 @@ export default function SettingsPage() {
 
     try {
       console.log('Attempting to change password...')
-      const response = await fetch('http://localhost:5000/api/auth/change-password', {
+      const response = await fetch('https://qtech-backend.vercel.app/api/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

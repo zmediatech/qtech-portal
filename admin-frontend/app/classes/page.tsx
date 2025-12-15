@@ -46,7 +46,7 @@ function ClassesContent() {
   const fetchClasses = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/classes')
+      const response = await fetch('https://qtech-backend.vercel.app/api/classes')
       const result = await response.json()
 
       if (!response.ok) {
@@ -71,7 +71,7 @@ function ClassesContent() {
   const handleDelete = async (id: string) => {
     try {
       setDeleting(true)
-      const response = await fetch(`http://localhost:5000/api/classes/${id}`, {
+      const response = await fetch(`https://qtech-backend.vercel.app/api/classes/${id}`, {
         method: 'DELETE',
       })
       const result = await response.json()

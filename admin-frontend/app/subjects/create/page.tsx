@@ -5,7 +5,7 @@ import { SubjectForm } from "@/components/subject-form";
 import { useRouter } from "next/navigation";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+  process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
 export default function CreateSubjectPage() {
   const router = useRouter();

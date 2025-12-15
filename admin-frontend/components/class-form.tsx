@@ -42,7 +42,7 @@ export function ClassForm({ classData, onSubmit }: ClassFormProps) {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/subjects", {
+        const res = await fetch("https://qtech-backend.vercel.app/api/subjects", {
           cache: "no-store",
         })
         const json = await res.json()

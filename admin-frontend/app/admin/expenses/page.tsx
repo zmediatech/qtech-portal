@@ -59,7 +59,7 @@ type Summary = {
 
 // ===== Config =====
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:5000"
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://qtech-backend.vercel.app"
 const EXPENSES_URL = `${API_BASE}/api/expenses`
 const SUMMARY_URL = `${API_BASE}/api/expenses/summary`
 const EXPORT_URL = `${API_BASE}/api/expenses/export`

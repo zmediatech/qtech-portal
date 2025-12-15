@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label"; // Ensure correct import path
 import { Badge } from "@/components/ui/badge"; // Ensure correct import path
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
 type AttendanceStatus = "present" | "absent" | "late";
 interface Student { _id: string; name: string; regNo: string }

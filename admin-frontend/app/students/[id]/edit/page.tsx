@@ -7,7 +7,7 @@ import { StudentForm } from "@/components/student-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
 interface EditStudentPageProps {
   params: Promise<{ id: string }>; // ✅ params is a Promise now

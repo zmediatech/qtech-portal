@@ -23,7 +23,7 @@ export default function CreateClassPage() {
     () =>
       (process.env.NEXT_PUBLIC_API_BASE_URL ||
         process.env.NEXT_PUBLIC_API_BASE ||
-        "http://localhost:5000"
+        "https://qtech-backend.vercel.app"
       ).replace(/\/$/, ""),
     []
   );

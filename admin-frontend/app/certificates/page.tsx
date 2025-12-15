@@ -10,7 +10,7 @@ const STYLES   = ["normal", "bold", "italic", "boldItalic"] as const;
 
 export default function CertificatesPage() {
   const API_BASE = useMemo(
-    () => (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000").replace(/\/$/, ""),
+    () => (process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app").replace(/\/$/, ""),
     []
   );
 

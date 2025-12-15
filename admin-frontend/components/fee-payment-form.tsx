@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 
-const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 const API_FEE = `${RAW_BASE.replace(/\/+$/, "")}/api/fee-records`;
 const API_CLASSES = `${RAW_BASE.replace(/\/+$/, "")}/api/classes`;
 

@@ -50,7 +50,7 @@ export default function DashboardKpisSimple() {
   const [error, setError] = useState<string | null>(null);
 
   const API_BASE = useMemo(
-    () => (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000").replace(/\/$/, ""),
+    () => (process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app").replace(/\/$/, ""),
     []
   );
 

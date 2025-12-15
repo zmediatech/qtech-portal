@@ -20,7 +20,7 @@ export default function LoginPage() {
     const fromStorage = localStorage.getItem("apiBase");
     setApiBase(
       (fromStorage && fromStorage.replace(/\/$/, "")) ||
-        (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "")
+        (process.env.NEXT_PUBLIC_API_URL || "https://qtech-backend.vercel.app").replace(/\/$/, "")
     );
   }, []);
   const loginUrl = useMemo(() => (apiBase ? `${apiBase}/api/auth/login` : ""), [apiBase]);
@@ -113,7 +113,7 @@ export default function LoginPage() {
             <input
               value={apiBase}
               onChange={(e) => setApiBase(e.target.value)}
-              placeholder="http://localhost:5000"
+              placeholder="https://qtech-backend.vercel.app"
               className="border rounded px-3 py-2 text-sm"
             />
             <button

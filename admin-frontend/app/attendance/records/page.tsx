@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
 interface Student {
   _id: string;

@@ -105,7 +105,7 @@ export default function MarksForm({
     };
 
     // Always call your backend directly (port 5000), with env override if present
-    const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+    const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || "https://qtech-backend.vercel.app").replace(/\/$/, "");
     const url = `${API_ROOT}/api/marks`;
 
     const res = await fetch(url, {
@@ -125,7 +125,7 @@ export default function MarksForm({
           msg = j?.error || j?.message || msg;
         } catch {}
       } else if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
-        msg += " Received HTML instead of JSON. Check the URL (should be http://localhost:5000/api/marks).";
+        msg += " Received HTML instead of JSON. Check the URL (should be https://qtech-backend.vercel.app/api/marks).";
       } else if (text) {
         msg = text;
       }

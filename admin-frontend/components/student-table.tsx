@@ -92,7 +92,7 @@ export function StudentTable({
         params.append("feeStatus", feeStatusFilter)
       }
 
-      const url = `http://localhost:5000/api/students${params.toString() ? `?${params.toString()}` : ''}`
+      const url = `https://qtech-backend.vercel.app/api/students${params.toString() ? `?${params.toString()}` : ''}`
       const response = await fetch(url)
       if (!response.ok) throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
       
@@ -115,7 +115,7 @@ export function StudentTable({
   const handleDeleteStudent = async (studentId: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return
     try {
-      const response = await fetch(`http://localhost:5000/api/students/${studentId}`, { method: 'DELETE' })
+      const response = await fetch(`https://qtech-backend.vercel.app/api/students/${studentId}`, { method: 'DELETE' })
       const result = await response.json()
       if (response.ok && result.success) {
         setStudents(prev => prev.filter(s => s._id !== studentId))

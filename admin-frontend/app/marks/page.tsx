@@ -23,7 +23,7 @@ type Mark = {
   createdAt?: string;
 };
 
-const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || "https://qtech-backend.vercel.app").replace(/\/$/, "");
 const LIST_URL = `${API_ROOT}/api/marks`;
 
 export default function MarksPage() {
