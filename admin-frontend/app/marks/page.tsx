@@ -5,20 +5,22 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import MarksTable from "@/components/MarksTable";
+import { MarksTable } from "@/components/MarksTable";
+import { Search, RefreshCw } from "lucide-react";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://qtech-backend.vercel.app";
 
 export default function MarksPage() {
-  const [marks, setMarks] = useState([]);
-  const [q, setQ] = useState("");
+  const [marks, setMarks] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const loadMarks = async () => {
+  const fetchMarks = async () => {
     setLoading(true);
     const res = await fetch(
-      `${API_BASE}/api/marks${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      `${API_BASE}/api/marks${search ? `?q=${encodeURIComponent(search)}` : ""}`,
       { cache: "no-store" }
     );
     const json = await res.json();
@@ -27,31 +29,49 @@ export default function MarksPage() {
   };
 
   useEffect(() => {
-    loadMarks();
+    fetchMarks();
   }, []);
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-semibold md:text-2xl">Marks</h1>
-        <Link href="/marks/create">
-          <Button>Add Marks</Button>
-        </Link>
-      </div>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold md:text-2xl">
+            Marks
+          </h1>
+          <Link href="/marks/create">
+            <Button>Add Marks</Button>
+          </Link>
+        </div>
 
-      <div className="flex gap-2 mb-4">
-        <Input
-          placeholder="Search by reg no / name"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="w-[260px]"
-        />
-        <Button variant="secondary" onClick={loadMarks}>
-          Search
-        </Button>
-      </div>
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <div className="relative w-[280px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Search by reg no or name"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-      <MarksTable data={marks} loading={loading} />
+          <Button
+            variant="outline"
+            onClick={fetchMarks}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Search
+          </Button>
+        </div>
+
+        {/* Table */}
+        <MarksTable data={marks} loading={loading} />
+      </div>
     </AdminLayout>
   );
 }

@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -10,54 +18,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://qtech-backend.vercel.app";
 
-function gradeFromPct(p: number) {
+const gradeFromPct = (p: number) => {
   if (p >= 90) return "A+";
   if (p >= 80) return "A";
   if (p >= 70) return "B";
   if (p >= 60) return "C";
   if (p >= 50) return "D";
   return "F";
-}
+};
 
-export default function MarksForm({
-  initialData,
-  onSuccess,
+export function MarksForm({
+  mark,
+  onSubmit,
 }: {
-  initialData?: any;
-  onSuccess: () => void;
+  mark?: any;
+  onSubmit: (data: any) => Promise<void>;
 }) {
   const [students, setStudents] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
 
-  const [studentId, setStudentId] = useState(initialData?.student?._id || "");
-  const [subjectId, setSubjectId] = useState(initialData?.subject?._id || "");
-  const [examId, setExamId] = useState(initialData?.exam?._id || "");
+  const [studentId, setStudentId] = useState(mark?.student?._id || "");
+  const [subjectId, setSubjectId] = useState(mark?.subject?._id || "");
+  const [examId, setExamId] = useState(mark?.exam?._id || "");
+  const [totalMarks, setTotalMarks] = useState(mark?.totalMarks || 100);
+  const [obtainedMarks, setObtainedMarks] = useState(mark?.obtainedMarks || 0);
 
-  const [totalMarks, setTotalMarks] = useState(initialData?.totalMarks || 100);
-  const [obtainedMarks, setObtainedMarks] = useState(
-    initialData?.obtainedMarks || 0
-  );
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const percentage = useMemo(
-    () => +(obtainedMarks * 100 / totalMarks).toFixed(2),
+    () =>
+      totalMarks > 0
+        ? +(obtainedMarks * 100 / totalMarks).toFixed(2)
+        : 0,
     [obtainedMarks, totalMarks]
   );
 
   const grade = useMemo(() => gradeFromPct(percentage), [percentage]);
 
-  // Load students
+  /* ---------------- Load Students ---------------- */
   useEffect(() => {
-    fetch(`${API_BASE}/api/students`)
-      .then((r) => r.json())
-      .then((j) => setStudents(j.data || []));
+    const loadStudents = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/students`);
+        const json = await res.json();
+        setStudents(json.data || []);
+      } catch {
+        setError("Failed to load students");
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    loadStudents();
   }, []);
 
-  // Load subjects + exams when student changes
+  /* -------- Load Subjects & Exams by Student -------- */
   useEffect(() => {
     const student = students.find((s) => s._id === studentId);
     if (!student) return;
@@ -71,8 +95,15 @@ export default function MarksForm({
       .then((j) => setExams(j.data || []));
   }, [studentId, students]);
 
-  const onSubmit = async () => {
-    const payload = {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentId || !subjectId) {
+      alert("Student and subject are required");
+      return;
+    }
+
+    setLoading(true);
+    await onSubmit({
       studentId,
       subjectId,
       examId: examId || undefined,
@@ -80,86 +111,130 @@ export default function MarksForm({
       obtainedMarks,
       percentage,
       grade,
-    };
-
-    const method = initialData ? "PATCH" : "POST";
-    const url = initialData
-      ? `${API_BASE}/api/marks/${initialData._id}`
-      : `${API_BASE}/api/marks`;
-
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
     });
-
-    onSuccess();
+    setLoading(false);
   };
 
+  if (loadingData) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" />
+          <div className="text-muted-foreground">Loading form data…</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="grid gap-4 max-w-xl">
-      {/* Student */}
-      <Select value={studentId} onValueChange={setStudentId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select student" />
-        </SelectTrigger>
-        <SelectContent>
-          {students.map((s) => (
-            <SelectItem key={s._id} value={s._id}>
-              {s.regNo} — {s.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <Card>
+      <CardHeader>
+        <CardTitle>{mark ? "Edit Marks" : "Add Marks"}</CardTitle>
+        <CardDescription>
+          Record exam results for a student
+        </CardDescription>
+      </CardHeader>
 
-      {/* Subject */}
-      <Select value={subjectId} onValueChange={setSubjectId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select subject" />
-        </SelectTrigger>
-        <SelectContent>
-          {subjects.map((s) => (
-            <SelectItem key={s._id} value={s._id}>
-              {s.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Exam */}
-      <Select value={examId} onValueChange={setExamId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select exam (optional)" />
-        </SelectTrigger>
-        <SelectContent>
-          {exams.map((e) => (
-            <SelectItem key={e._id} value={e._id}>
-              {e.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Student *</Label>
+            <Select value={studentId} onValueChange={setStudentId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select student" />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.regNo} — {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Input
-        type="number"
-        value={totalMarks}
-        onChange={(e) => setTotalMarks(+e.target.value)}
-        placeholder="Total marks"
-      />
+          <div className="space-y-2">
+            <Label>Subject *</Label>
+            <Select value={subjectId} onValueChange={setSubjectId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Input
-        type="number"
-        value={obtainedMarks}
-        onChange={(e) => setObtainedMarks(+e.target.value)}
-        placeholder="Obtained marks"
-      />
+          <div className="space-y-2">
+            <Label>Exam (optional)</Label>
+            <Select value={examId} onValueChange={setExamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select exam" />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((e) => (
+                  <SelectItem key={e._id} value={e._id}>
+                    {e.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Input value={`${percentage}%`} readOnly />
-      <Input value={grade} readOnly />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Total Marks</Label>
+              <Input
+                type="number"
+                value={totalMarks}
+                onChange={(e) => setTotalMarks(+e.target.value)}
+              />
+            </div>
 
-      <Button onClick={onSubmit}>
-        {initialData ? "Update Marks" : "Save Marks"}
-      </Button>
-    </div>
+            <div className="space-y-2">
+              <Label>Obtained Marks</Label>
+              <Input
+                type="number"
+                value={obtainedMarks}
+                onChange={(e) => setObtainedMarks(+e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Percentage</Label>
+              <Input value={`${percentage}%`} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label>Grade</Label>
+              <Input value={grade} readOnly />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : mark ? "Update Marks" : "Save Marks"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
