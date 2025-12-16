@@ -1,157 +1,195 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "@/hooks/use-toast"
+import { useEffect, useMemo, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Subject {
-  _id: string
-  name: string
-  code?: string
+  _id: string;
+  name: string;
+  code?: string;
 }
 
 interface ClassFormProps {
-  classData?: {
-    id?: string
-    name: string
-    description?: string
-    subjectIds: string[]
-  }
-  onSubmit?: (data: any) => void
+  initialData?: {
+    name?: string;
+    description?: string;
+    subjects?: string[];
+  };
+  onSubmit: (data: {
+    name: string;
+    description?: string;
+    subjects: string[];
+  }) => Promise<void>;
 }
 
-export function ClassForm({ classData, onSubmit }: ClassFormProps) {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: classData?.name || "",
-    description: classData?.description || "",
-    subjectIds: classData?.subjectIds || [],
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function ClassForm({ initialData, onSubmit }: ClassFormProps) {
+  const API_BASE = useMemo(
+    () =>
+      (process.env.NEXT_PUBLIC_API_BASE_URL ||
+        process.env.NEXT_PUBLIC_API_BASE ||
+        "https://qtech-backend.vercel.app"
+      ).replace(/\/$/, ""),
+    []
+  );
 
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [loadingSubjects, setLoadingSubjects] = useState(true)
+  // form state
+  const [name, setName] = useState(initialData?.name || "");
+  const [description, setDescription] = useState(
+    initialData?.description || ""
+  );
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
+    initialData?.subjects || []
+  );
 
-  // 🔹 Fetch subjects from backend API
+  // subjects
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+
+  // ui
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialData) return;
+
+    setName(initialData.name || "");
+    setDescription(initialData.description || "");
+    setSelectedSubjects(initialData.subjects || []);
+  }, [initialData]);
+
+
+  // fetch subjects
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await fetch("https://qtech-backend.vercel.app/api/subjects", {
+        setError(null);
+        const res = await fetch(`${API_BASE}/api/subjects`, {
           cache: "no-store",
-        })
-        const json = await res.json()
+        });
+        if (!res.ok) throw new Error("Failed to load subjects");
 
-        if (res.ok && json.success && Array.isArray(json.data)) {
-          setSubjects(json.data)
-        } else {
-          throw new Error(json.message || "Failed to fetch subjects")
-        }
-      } catch (err: any) {
-        console.error("Error fetching subjects:", err.message)
-        toast({
-          title: "Error",
-          description: "Failed to load subjects from server",
-          variant: "destructive",
-        })
+        const json = await res.json();
+        const list = Array.isArray(json) ? json : json?.data ?? [];
+        setSubjects(list);
+      } catch {
+        setError("Failed to load subjects");
       } finally {
-        setLoadingSubjects(false)
+        setLoadingSubjects(false);
       }
+    };
+
+    fetchSubjects();
+  }, [API_BASE]);
+
+  const toggleSubject = (id: string, checked: boolean) => {
+    setSelectedSubjects((prev) =>
+      checked ? [...prev, id] : prev.filter((sid) => sid !== id)
+    );
+  };
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      setError("Class name is required");
+      return;
     }
-
-    fetchSubjects()
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
 
     try {
-      if (onSubmit) {
-        onSubmit(formData) // 🔹 send subjectIds with other data
-      } else {
-        toast({
-          title: classData ? "Class Updated" : "Class Created",
-          description: `${formData.name} has been ${classData ? "updated" : "created"} successfully.`,
-        })
-        router.push("/classes")
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+      setSaving(true);
+      setError(null);
 
-  const handleSubjectToggle = (subjectId: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      subjectIds: checked
-        ? [...prev.subjectIds, subjectId]
-        : prev.subjectIds.filter((id) => id !== subjectId),
-    }))
+      await onSubmit({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        subjects: selectedSubjects,
+      });
+    } catch (e: any) {
+      setError(e?.message || "Failed to save class");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{classData ? "Edit Class" : "Create New Class"}</CardTitle>
+        <CardTitle>Class Details</CardTitle>
         <CardDescription>
-          {classData ? "Update class information" : "Add a new class to the academic structure"}
+          Enter class details and assign subjects
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Class Name *</Label>
+            <Label htmlFor="name">Name *</Label>
             <Input
               id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Grade 10-A"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Grade 10 - A"
               required
             />
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Brief description of the class..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description"
               rows={3}
             />
           </div>
 
-          <div className="space-y-4">
+          {/* Subjects */}
+          <div className="space-y-2">
             <Label>Subjects</Label>
+
             {loadingSubjects ? (
-              <p className="text-sm text-muted-foreground">Loading subjects…</p>
+              <p className="text-sm text-muted-foreground">
+                Loading subjects…
+              </p>
             ) : subjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No subjects found</p>
+              <p className="text-sm text-muted-foreground">
+                No subjects found
+              </p>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                {subjects.map((subject) => (
-                  <div key={subject._id} className="flex items-center space-x-2">
+                {subjects.map((subj) => (
+                  <div
+                    key={subj._id}
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
-                      id={subject._id}
-                      checked={formData.subjectIds.includes(subject._id)}
+                      id={subj._id}
+                      checked={selectedSubjects.includes(subj._id)}
                       onCheckedChange={(checked) =>
-                        handleSubjectToggle(subject._id, checked as boolean)
+                        toggleSubject(subj._id, checked as boolean)
                       }
                     />
-                    <Label htmlFor={subject._id} className="text-sm font-normal">
-                      {subject.name} {subject.code ? `(${subject.code})` : ""}
+                    <Label
+                      htmlFor={subj._id}
+                      className="text-sm font-normal"
+                    >
+                      {subj.name}
+                      {subj.code ? ` (${subj.code})` : ""}
                     </Label>
                   </div>
                 ))}
@@ -159,16 +197,18 @@ export function ClassForm({ classData, onSubmit }: ClassFormProps) {
             )}
           </div>
 
-          <div className="flex gap-4">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : classData ? "Update Class" : "Create Class"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
+          {error && (
+            <div className="text-sm text-red-600">{error}</div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button type="submit" disabled={saving || loadingSubjects}>
+              {saving ? "Saving…" : "Save"}
             </Button>
           </div>
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

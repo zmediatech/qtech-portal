@@ -162,34 +162,34 @@ export function SubjectForm({ subject, onSubmit }: SubjectFormProps) {
           </div>
 
           {/* Linked Classes */}
-          <div className="space-y-2">
-            <Label>Linked Classes</Label>
+          {subject?._id && (
+            <div className="space-y-2">
+              <Label>Linked Classes</Label>
 
-            {loadingData ? (
-              <p className="text-sm text-muted-foreground">
-                Loading classes...
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {classes.map((cls) => (
-                  <label
-                    key={cls._id}
-                    className="flex items-center gap-2 border rounded-md p-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.linkedClasses.includes(cls._id)}
-                      onChange={() => toggleClass(cls._id)}
-                    />
-                    <span>
-                      {cls.code ? `${cls.code} - ` : ""}
-                      {cls.name}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+              {loadingData ? (
+                <p className="text-sm text-muted-foreground">Loading classes...</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {classes.map((cls) => (
+                    <label
+                      key={cls._id}
+                      className="flex items-center gap-2 border rounded-md p-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.linkedClasses.includes(cls._id)}
+                        onChange={() => toggleClass(cls._id)}
+                      />
+                      <span>
+                        {cls.code ? `${cls.code} - ` : ""}
+                        {cls.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <Button type="submit" disabled={loading}>
             {loading ? (

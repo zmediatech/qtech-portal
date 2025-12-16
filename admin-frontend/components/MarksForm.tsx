@@ -1,212 +1,165 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const schema = z
-  .object({
-    regNo: z.string().min(1, "Registration No is required"),
-    studentName: z.string().min(1, "Student name is required"),
-    className: z.string().min(1, "Class name is required"),
-    subject: z.string().min(1, "Subject is required"),
-    examTitle: z.string().default("Exam"),
-    examDate: z.string().optional(), // YYYY-MM-DD
-    totalMarks: z
-      .number({ invalid_type_error: "Total marks must be a number" })
-      .min(1, "Total marks must be at least 1"),
-    obtainedMarks: z
-      .number({ invalid_type_error: "Obtained marks must be a number" })
-      .min(0, "Obtained marks cannot be negative"),
-  })
-  .refine((v) => v.obtainedMarks <= v.totalMarks, {
-    message: "Obtained marks cannot exceed total marks",
-    path: ["obtainedMarks"],
-  });
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 
-export type MarksFormValues = z.infer<typeof schema> & {
-  percentage?: number;
-  grade?: string;
-};
-
-function getGrade(pct: number): string {
-  if (pct >= 90) return "A+";
-  if (pct >= 80) return "A";
-  if (pct >= 70) return "B";
-  if (pct >= 60) return "C";
-  if (pct >= 50) return "D";
+function gradeFromPct(p: number) {
+  if (p >= 90) return "A+";
+  if (p >= 80) return "A";
+  if (p >= 70) return "B";
+  if (p >= 60) return "C";
+  if (p >= 50) return "D";
   return "F";
 }
 
 export default function MarksForm({
-  className,
-  onSubmitted,
-  initialValues,
+  initialData,
+  onSuccess,
 }: {
-  className?: string;
-  onSubmitted?: (created: any) => void;
-  initialValues?: Partial<MarksFormValues>;
+  initialData?: any;
+  onSuccess: () => void;
 }) {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<MarksFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      regNo: "",
-      studentName: "",
-      className: "",
-      subject: "",
-      examTitle: "Exam",
-      examDate: "",
-      totalMarks: 100,
-      obtainedMarks: 0,
-      ...initialValues,
-    },
-  });
+  const [students, setStudents] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
 
-  const totalMarks = watch("totalMarks");
-  const obtainedMarks = watch("obtainedMarks");
+  const [studentId, setStudentId] = useState(initialData?.student?._id || "");
+  const [subjectId, setSubjectId] = useState(initialData?.subject?._id || "");
+  const [examId, setExamId] = useState(initialData?.exam?._id || "");
 
-  const { percentage, grade } = useMemo(() => {
-    const t = Number(totalMarks) || 0;
-    const o = Number(obtainedMarks) || 0;
-    if (t <= 0) return { percentage: 0, grade: "F" };
-    const pct = Math.max(0, Math.min(100, +(o * 100 / t).toFixed(2)));
-    return { percentage: pct, grade: getGrade(pct) };
-  }, [totalMarks, obtainedMarks]);
+  const [totalMarks, setTotalMarks] = useState(initialData?.totalMarks || 100);
+  const [obtainedMarks, setObtainedMarks] = useState(
+    initialData?.obtainedMarks || 0
+  );
 
+  const percentage = useMemo(
+    () => +(obtainedMarks * 100 / totalMarks).toFixed(2),
+    [obtainedMarks, totalMarks]
+  );
+
+  const grade = useMemo(() => gradeFromPct(percentage), [percentage]);
+
+  // Load students
   useEffect(() => {
-    setValue("percentage", percentage as any);
-    setValue("grade", grade as any);
-  }, [percentage, grade, setValue]);
+    fetch(`${API_BASE}/api/students`)
+      .then((r) => r.json())
+      .then((j) => setStudents(j.data || []));
+  }, []);
 
-  const onSubmit = async (values: MarksFormValues) => {
+  // Load subjects + exams when student changes
+  useEffect(() => {
+    const student = students.find((s) => s._id === studentId);
+    if (!student) return;
+
+    fetch(`${API_BASE}/api/subjects?classId=${student.classId}`)
+      .then((r) => r.json())
+      .then((j) => setSubjects(j.data || []));
+
+    fetch(`${API_BASE}/api/exams?classId=${student.classId}`)
+      .then((r) => r.json())
+      .then((j) => setExams(j.data || []));
+  }, [studentId, students]);
+
+  const onSubmit = async () => {
     const payload = {
-      regNo: values.regNo.trim(),
-      studentName: values.studentName.trim(),
-      className: values.className.trim(),
-      subject: values.subject.trim(),
-      examTitle: (values.examTitle || "Exam").trim(),
-      examDate: values.examDate ? new Date(values.examDate) : undefined,
-      totalMarks: Number(values.totalMarks),
-      obtainedMarks: Number(values.obtainedMarks),
+      studentId,
+      subjectId,
+      examId: examId || undefined,
+      totalMarks,
+      obtainedMarks,
       percentage,
       grade,
     };
 
-    // Always call your backend directly (port 5000), with env override if present
-    const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || "https://qtech-backend.vercel.app").replace(/\/$/, "");
-    const url = `${API_ROOT}/api/marks`;
+    const method = initialData ? "PATCH" : "POST";
+    const url = initialData
+      ? `${API_BASE}/api/marks/${initialData._id}`
+      : `${API_BASE}/api/marks`;
 
-    const res = await fetch(url, {
-      method: "POST",
+    await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    const contentType = res.headers.get("content-type") || "";
-    const text = await res.text();
-
-    if (!res.ok) {
-      let msg = `Failed to create mark record (HTTP ${res.status}).`;
-      if (contentType.includes("application/json")) {
-        try {
-          const j = JSON.parse(text);
-          msg = j?.error || j?.message || msg;
-        } catch {}
-      } else if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
-        msg += " Received HTML instead of JSON. Check the URL (should be https://qtech-backend.vercel.app/api/marks).";
-      } else if (text) {
-        msg = text;
-      }
-      throw new Error(msg);
-    }
-
-    if (!contentType.includes("application/json")) {
-      throw new Error("Server did not return JSON. Make sure Express returns JSON on /api/marks.");
-    }
-
-    const data = JSON.parse(text);
-    const created = (data && (data.data || data)) ?? data;
-
-    onSubmitted?.(created);
-    reset();
+    onSuccess();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={cn("grid gap-4 sm:grid-cols-2", className)}>
-      {/* Student Info */}
-      <div className="sm:col-span-2 grid gap-4 sm:grid-cols-3">
-        <div>
-          <Label htmlFor="regNo">Registration No</Label>
-          <Input id="regNo" placeholder="e.g. R-2025-001" {...register("regNo")} />
-          {errors.regNo && <p className="text-sm text-red-600 mt-1">{errors.regNo.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="studentName">Student Name</Label>
-          <Input id="studentName" placeholder="e.g. Ali Khan" {...register("studentName")} />
-          {errors.studentName && <p className="text-sm text-red-600 mt-1">{errors.studentName.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="className">Class</Label>
-          <Input id="className" placeholder="e.g. Grade 10-A" {...register("className")} />
-          {errors.className && <p className="text-sm text-red-600 mt-1">{errors.className.message}</p>}
-        </div>
-      </div>
+    <div className="grid gap-4 max-w-xl">
+      {/* Student */}
+      <Select value={studentId} onValueChange={setStudentId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select student" />
+        </SelectTrigger>
+        <SelectContent>
+          {students.map((s) => (
+            <SelectItem key={s._id} value={s._id}>
+              {s.regNo} — {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      {/* Exam Info */}
-      <div>
-        <Label htmlFor="subject">Subject</Label>
-        <Input id="subject" placeholder="e.g. Mathematics" {...register("subject")} />
-        {errors.subject && <p className="text-sm text-red-600 mt-1">{errors.subject.message}</p>}
-      </div>
-      <div>
-        <Label htmlFor="examTitle">Exam Title</Label>
-        <Input id="examTitle" placeholder="e.g. Mid Term" {...register("examTitle")} />
-        {errors.examTitle && <p className="text-sm text-red-600 mt-1">{(errors as any).examTitle?.message as string}</p>}
-      </div>
-      <div>
-        <Label htmlFor="examDate">Exam Date</Label>
-        <Input id="examDate" type="date" {...register("examDate")} />
-      </div>
+      {/* Subject */}
+      <Select value={subjectId} onValueChange={setSubjectId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select subject" />
+        </SelectTrigger>
+        <SelectContent>
+          {subjects.map((s) => (
+            <SelectItem key={s._id} value={s._id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      {/* Marks */}
-      <div>
-        <Label htmlFor="totalMarks">Total Marks</Label>
-        <Input id="totalMarks" type="number" step="1" min={1} {...register("totalMarks", { valueAsNumber: true })} />
-        {errors.totalMarks && <p className="text-sm text-red-600 mt-1">{errors.totalMarks.message}</p>}
-      </div>
-      <div>
-        <Label htmlFor="obtainedMarks">Obtained Marks</Label>
-        <Input id="obtainedMarks" type="number" step="1" min={0} {...register("obtainedMarks", { valueAsNumber: true })} />
-        {errors.obtainedMarks && <p className="text-sm text-red-600 mt-1">{errors.obtainedMarks.message}</p>}
-      </div>
+      {/* Exam */}
+      <Select value={examId} onValueChange={setExamId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select exam (optional)" />
+        </SelectTrigger>
+        <SelectContent>
+          {exams.map((e) => (
+            <SelectItem key={e._id} value={e._id}>
+              {e.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      {/* Computed */}
-      <div>
-        <Label>Percentage</Label>
-        <Input value={percentage} readOnly />
-      </div>
-      <div>
-        <Label>Grade</Label>
-        <Input value={grade} readOnly />
-      </div>
+      <Input
+        type="number"
+        value={totalMarks}
+        onChange={(e) => setTotalMarks(+e.target.value)}
+        placeholder="Total marks"
+      />
 
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-          {isSubmitting ? "Saving..." : "Save Marks"}
-        </Button>
-      </div>
-    </form>
+      <Input
+        type="number"
+        value={obtainedMarks}
+        onChange={(e) => setObtainedMarks(+e.target.value)}
+        placeholder="Obtained marks"
+      />
+
+      <Input value={`${percentage}%`} readOnly />
+      <Input value={grade} readOnly />
+
+      <Button onClick={onSubmit}>
+        {initialData ? "Update Marks" : "Save Marks"}
+      </Button>
+    </div>
   );
 }
