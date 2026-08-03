@@ -7,7 +7,7 @@ function requireAuth(req, res, next) {
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (!token) return res.status(401).json({ success: false, message: 'No token provided.' });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-123');
     req.user = { id: decoded.id || decoded._id };
     next();
   } catch (err) {

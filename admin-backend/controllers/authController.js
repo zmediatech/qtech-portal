@@ -2,11 +2,16 @@
 const bcrypt = require("bcryptjs");
 const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
+const connectDB = require("../config/db");
 
 const signup = async (req, res) => {
   try {
-    const { name, password } = req.body;
-    const email = String(req.body.email || "").toLowerCase().trim();
+    const body = req.body || {};
+    const name = body.name;
+    const password = body.password;
+    const email = String(body.email || "").toLowerCase().trim();
+
+    await connectDB(process.env.MONGODB_URI);
 
     const exists = await UserModel.findOne({ email });
     if (exists) {
@@ -29,9 +34,12 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const email = String(req.body.email || "").toLowerCase().trim();
-    const { password } = req.body;
+    const body = req.body || {};
+    const email = String(body.email || "").toLowerCase().trim();
+    const password = body.password;
     const errorMsg = "auth failed email or password is wrong";
+
+    await connectDB(process.env.MONGODB_URI);
 
     const user = await UserModel.findOne({ email });
     if (!user) return res.status(403).json({ message: errorMsg, success: false });

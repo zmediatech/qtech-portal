@@ -2,6 +2,7 @@
 const UserModel = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const connectDB = require('../config/db');
 
 const getAllUsers = async (_req, res) => {
   try {
@@ -24,8 +25,13 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, password } = req.body;
-    const email = String(req.body.email || "").toLowerCase().trim();
+    const body = req.body || {};
+    const name = body.name;
+    const password = body.password;
+    const email = String(body.email || "").toLowerCase().trim();
+
+    await connectDB(process.env.MONGODB_URI);
+
     if (!name || !email || !password)
       return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
 
@@ -106,8 +112,9 @@ const deleteUser = async (req, res) => {
 // };
 const loginUser = async (req, res) => {
   try {
-    const email = String(req.body.email || "").toLowerCase().trim();
-    const { password } = req.body;
+    const body = req.body || {};
+    const email = String(body.email || "").toLowerCase().trim();
+    const password = body.password;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -115,6 +122,8 @@ const loginUser = async (req, res) => {
         message: 'Please provide email and password'
       });
     }
+
+    await connectDB(process.env.MONGODB_URI);
 
     const user = await UserModel.findOne({ email });
     if (!user) {
@@ -134,7 +143,7 @@ const loginUser = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'secret-123',
       { expiresIn: '24h' }
     );
 
@@ -160,6 +169,7 @@ const loginUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   try {
+    await connectDB(process.env.MONGODB_URI);
     const { currentPassword, newPassword } = req.body;
     const userId = req.params.id;
 
