@@ -6,18 +6,14 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
   LayoutDashboard,
   Users,
   GraduationCap,
   Award,
   ClipboardList,
-  BarChart3,
-  Settings,
-  CreditCard,
   UserCheck,
-  Menu,
   Building2,
   ChevronDown,
   ChevronRight,
@@ -88,9 +84,17 @@ interface SidebarProps {
   className?: string
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
+  mobileOpen: boolean
+  setMobileOpen: (open: boolean) => void
 }
 
-export function AdminSidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps) {
+export function AdminSidebar({
+  className,
+  isCollapsed,
+  setIsCollapsed,
+  mobileOpen,
+  setMobileOpen,
+}: SidebarProps) {
   const pathname = usePathname()
 
   // Auto-open any group that contains the current route
@@ -217,13 +221,7 @@ export function AdminSidebar({ className, isCollapsed, setIsCollapsed }: Sidebar
       </div>
 
       {/* Mobile Sidebar */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 lg:hidden bg-transparent">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
-        </SheetTrigger>
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="flex flex-col bg-sidebar p-0">
           <SidebarContent />
         </SheetContent>

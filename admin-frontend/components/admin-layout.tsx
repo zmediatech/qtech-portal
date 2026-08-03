@@ -31,19 +31,24 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
     <div
-      className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]"
-      style={{
-        gridTemplateColumns: `${isCollapsed ? "64px" : "280px"} 1fr`,
-      }}
+      className="flex min-h-screen w-full flex-col lg:grid"
+      style={{ gridTemplateColumns: isCollapsed ? "64px 1fr" : "280px 1fr" }}
     >
-      {/* Pass isCollapsed and setIsCollapsed as props */}
-      <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <div className="flex flex-col">
-        <AdminHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">{children}</main>
+      <AdminSidebar
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+        mobileOpen={mobileSidebarOpen}
+        setMobileOpen={setMobileSidebarOpen}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AdminHeader onMenuClick={() => setMobileSidebarOpen(true)} />
+        <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-auto p-3 sm:p-4 lg:gap-6 lg:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

@@ -1,13 +1,17 @@
 "use client"
 
-import { Search, LogOut } from "lucide-react"
+import { Menu, Search, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "./theme-toggle"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  onMenuClick: () => void
+}
+
+export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter()
 
   // Public login route after logout
@@ -50,15 +54,26 @@ export function AdminHeader() {
   }
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
-      <div className="w-full flex-1">
+    <header className="flex h-14 items-center gap-3 border-b bg-background px-3 lg:h-[60px] lg:px-6">
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-9 w-9 shrink-0 bg-transparent lg:hidden"
+        onClick={onMenuClick}
+        title="Open navigation"
+      >
+        <Menu className="h-4 w-4" />
+        <span className="sr-only">Open navigation</span>
+      </Button>
+
+      <div className="hidden w-full flex-1 md:block">
         <form>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search students, courses, fees..."
-              className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
+              className="w-full appearance-none bg-background pl-8 text-sm shadow-none md:w-2/3 lg:w-1/2 xl:w-1/3"
             />
           </div>
         </form>
@@ -71,7 +86,7 @@ export function AdminHeader() {
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8 bg-transparent"
+        className="h-8 w-8 shrink-0 bg-transparent"
         onClick={handleLogout}
         title="Logout"
       >
