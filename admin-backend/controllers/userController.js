@@ -24,7 +24,8 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, password } = req.body;
+    const email = String(req.body.email || "").toLowerCase().trim();
     if (!name || !email || !password)
       return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
 
@@ -105,7 +106,8 @@ const deleteUser = async (req, res) => {
 // };
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || "").toLowerCase().trim();
+    const { password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({

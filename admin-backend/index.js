@@ -119,5 +119,17 @@ connectOnce().catch((err) => {
   console.error("❌ MongoDB connection failed:", err.message);
 });
 
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  connectOnce().catch((err) => {
+    console.error("Failed to connect to MongoDB:", err.message);
+  });
+}
+
 /* ------------------ EXPORT APP (NO listen) ------------------ */
 module.exports = app;
