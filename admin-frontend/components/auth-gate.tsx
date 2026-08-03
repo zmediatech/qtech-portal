@@ -19,8 +19,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (redirecting.current) return;
 
-    // Allow the login page itself
-    if (pathname === LOGIN_PATH) {
+    // Allow the login pages themselves
+    if (pathname === LOGIN_PATH || pathname === "/") {
       setReady(true);
       return;
     }
@@ -63,6 +63,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [pathname, router, LOGIN_PATH]);
 
-  if (!ready && pathname !== LOGIN_PATH) return null;
+  if (!ready && pathname !== LOGIN_PATH && pathname !== "/") return null;
   return <>{children}</>;
 }

@@ -53,6 +53,16 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
+// Ensure every request waits for MongoDB on serverless cold starts.
+app.use(async (_req, _res, next) => {
+  try {
+    await connectOnce();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 /* ------------------ Health Check ------------------ */
 app.get("/", (_req, res) => {
   res.json({
