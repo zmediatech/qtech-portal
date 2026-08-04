@@ -70,8 +70,6 @@ function SignaturePad({ label, value, onChange }: SignaturePadProps) {
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, width, height);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.strokeStyle = "#111827";
@@ -81,8 +79,6 @@ function SignaturePad({ label, value, onChange }: SignaturePadProps) {
         const img = new Image();
         img.onload = () => {
           ctx.clearRect(0, 0, width, height);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, width, height);
           const scale = Math.min((width - 12) / img.width, (height - 12) / img.height, 1);
           const drawW = img.width * scale;
           const drawH = img.height * scale;
@@ -145,7 +141,7 @@ function SignaturePad({ label, value, onChange }: SignaturePadProps) {
       </div>
       <canvas
         ref={canvasRef}
-        className="h-28 w-full rounded-md border bg-white touch-none"
+        className="h-28 w-full rounded-md border bg-transparent touch-none"
         onPointerDown={(event) => {
           const canvas = canvasRef.current;
           const point = getPoint(event);
@@ -733,7 +729,7 @@ export default function CertificatesPage() {
                         <img
                           src={leftSignatureDataUrl}
                           alt="Left signer signature"
-                          className="mx-auto mb-2 h-[34px] w-[118px] object-contain"
+                          className="mx-auto mb-2 h-[40px] w-[128px] object-contain"
                         />
                       ) : (
                         <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
@@ -750,7 +746,7 @@ export default function CertificatesPage() {
                         <img
                           src={rightSignatureDataUrl}
                           alt="Right signer signature"
-                          className="mx-auto mb-2 h-[34px] w-[118px] object-contain"
+                          className="mx-auto mb-2 h-[40px] w-[128px] object-contain"
                         />
                       ) : (
                         <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
