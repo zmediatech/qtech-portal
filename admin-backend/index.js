@@ -56,6 +56,9 @@ app.use(morgan("dev"));
 // Ensure every request waits for MongoDB on serverless cold starts.
 app.use(async (_req, _res, next) => {
   try {
+    if (_req.originalUrl?.startsWith("/api/certificates")) {
+      return next();
+    }
     await connectOnce();
     next();
   } catch (err) {
