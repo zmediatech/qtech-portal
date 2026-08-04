@@ -274,7 +274,7 @@ export default function CertificatesPage() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout initialCollapsed>
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Link href="/dashboard">
@@ -285,7 +285,7 @@ export default function CertificatesPage() {
           <h1 className="text-xl font-semibold">Certificates</h1>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[390px_minmax(0,1fr)]">
           <Card>
             <CardHeader>
               <CardTitle>Certificate Details</CardTitle>
@@ -538,14 +538,15 @@ export default function CertificatesPage() {
                 )
               ) : (
                 <div className="w-full overflow-auto">
-                  <div
-                    className="relative mx-auto border shadow-sm"
+                  <div className="mx-auto inline-block bg-black p-[6px] shadow-2xl">
+                    <div
+                      className="relative"
                     style={{
                       width: 841,
                       height: 595,
                       background: "linear-gradient(135deg, #f8ecd5 0%, #fff8eb 45%, #f1d7a3 100%)",
                     }}
-                  >
+                    >
                     <div className="absolute inset-[48px]" />
                     <div className="absolute left-[48px] right-[48px] top-[48px] h-7 bg-[#7d0f14]" />
                     <div className="absolute left-[48px] right-[48px] bottom-[48px] h-[18px] bg-[#7d0f14]" />
@@ -620,6 +621,7 @@ export default function CertificatesPage() {
                     <div className="absolute left-[62px] bottom-[66px] text-[10px] font-semibold text-[#7d0f14]">{companyName}</div>
                     <div className="absolute left-1/2 bottom-[64px] -translate-x-1/2 text-[9px] uppercase tracking-[0.3em] text-gray-500">
                       {issueDate}
+                    </div>
                     </div>
                   </div>
                 </div>

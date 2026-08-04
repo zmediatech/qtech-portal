@@ -225,6 +225,14 @@ async function renderPresetCertificate(pdf, payload) {
   const top = pageH - inner;
   const bottom = inner;
   page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: cream });
+  page.drawRectangle({
+    x: 12,
+    y: 12,
+    width: pageW - 24,
+    height: pageH - 24,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 4,
+  });
 
   // Decorative maroon bands
   page.drawRectangle({ x: left, y: top - 28, width: right - left, height: 28, color: deepMaroon });

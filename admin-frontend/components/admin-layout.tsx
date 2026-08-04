@@ -27,10 +27,11 @@ import { AdminHeader } from "./admin-header"
 
 interface AdminLayoutProps {
   children: React.ReactNode
+  initialCollapsed?: boolean
 }
 
-export function AdminLayout({ children }: AdminLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+export function AdminLayout({ children, initialCollapsed = false }: AdminLayoutProps) {
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   return (
