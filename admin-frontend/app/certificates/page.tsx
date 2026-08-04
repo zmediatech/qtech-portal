@@ -552,29 +552,13 @@ export default function CertificatesPage() {
                     <div className="absolute left-[48px] right-[48px] bottom-[48px] h-[18px] bg-[#7d0f14]" />
                     <div className="absolute left-[46px] top-[48px] h-[95px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute left-[60px] top-[48px] h-[95px] w-[4px] bg-[#efd37a]" />
-                    <div className="absolute left-[90px] top-[18px] h-[92px] w-[9px] rotate-[-32deg] bg-[#fff8eb]" />
-                    <div className="absolute left-[78px] top-[20px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
-                    <div className="absolute left-[94px] top-[20px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
-                    <div className="absolute right-[102px] bottom-[2px] h-[92px] w-[9px] rotate-[-32deg] bg-[#fff8eb]" />
-                    <div className="absolute right-[68px] bottom-[8px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
-                    <div className="absolute right-[84px] bottom-[8px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
                     <div className="absolute right-[22px] bottom-[30px] h-[84px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute right-[22px] top-[18px] h-[56px] w-[56px]">
-                      {Array.from({ length: 12 }).map((_, i) => {
-                        const angle = (i * 360) / 12;
-                        return (
-                          <div
-                            key={i}
-                            className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#d8b45e] bg-[#8d1220]"
-                            style={{ transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-20px)` }}
-                          />
-                        );
-                      })}
-                      <div className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[#8d1220] bg-[#d8b45e]" />
-                      <div className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#d8b45e] bg-[#8d1220]" />
-                      <div className="absolute left-1/2 top-1/2 h-[38px] w-[14px] -translate-x-1/2 translate-y-[14px] bg-[#d8b45e]" />
-                      <div className="absolute left-1/2 top-1/2 h-[28px] w-[8px] -translate-x-[18px] translate-y-[18px] bg-[#c28f2c]" />
-                      <div className="absolute left-1/2 top-1/2 h-[28px] w-[8px] translate-x-[10px] translate-y-[18px] bg-[#c28f2c]" />
+                      <div className="absolute left-1/2 top-1/2 h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-[#d8b45e] bg-[#8d1220]" />
+                      <div className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#8d1220] bg-[#d8b45e]" />
+                      <div className="absolute left-1/2 top-1/2 h-[34px] w-[12px] -translate-x-1/2 translate-y-[14px] bg-[#d8b45e]" />
+                      <div className="absolute left-[9px] top-[30px] h-[24px] w-[7px] bg-[#c28f2c]" />
+                      <div className="absolute right-[9px] top-[30px] h-[24px] w-[7px] bg-[#c28f2c]" />
                       <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-[7px] font-bold uppercase text-white">
                         {sealText}
                       </div>
