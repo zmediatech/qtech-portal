@@ -57,7 +57,13 @@ const login = async (req, res) => {
       message: "login success",
       success: true,
       token,
-      user: { email: user.email, name: user.name, id: user._id },
+      user: {
+        email: user.email,
+        name: user.name,
+        id: user._id,
+        leftSignatureDataUrl: user.leftSignatureDataUrl || "",
+        rightSignatureDataUrl: user.rightSignatureDataUrl || "",
+      },
     });
   } catch (error) {
     console.error("Error during login:", error);
@@ -65,8 +71,66 @@ const login = async (req, res) => {
   }
 };
 
+const me = async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await UserModel.findById(userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+const updateSignatures = async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const leftSignatureDataUrl = String(req.body?.leftSignatureDataUrl || "");
+    const rightSignatureDataUrl = String(req.body?.rightSignatureDataUrl || "");
+
+    const updated = await UserModel.findByIdAndUpdate(
+      userId,
+      {
+        leftSignatureDataUrl,
+        rightSignatureDataUrl,
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Signatures saved successfully",
+      data: updated,
+    });
+  } catch (error) {
+    console.error("Error saving signatures:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 
 
-module.exports = { signup, login };
+
+module.exports = { signup, login, me, updateSignatures };
 
 // 

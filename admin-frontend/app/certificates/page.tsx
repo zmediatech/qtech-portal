@@ -232,6 +232,8 @@ export default function CertificatesPage() {
   const [rightSignerRole, setRightSignerRole] = useState("Director");
   const [leftSignatureDataUrl, setLeftSignatureDataUrl] = useState("");
   const [rightSignatureDataUrl, setRightSignatureDataUrl] = useState("");
+  const [savedSignatureStatus, setSavedSignatureStatus] = useState<string>("");
+  const [savingSignatures, setSavingSignatures] = useState(false);
   const [sealText, setSealText] = useState("AWARD");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -259,6 +261,34 @@ export default function CertificatesPage() {
       }
     };
     fetchStudents();
+  }, [API_BASE]);
+
+  useEffect(() => {
+    const loadSavedSignatures = async () => {
+      if (typeof window === "undefined") return;
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const user = json?.data || {};
+        if (user.leftSignatureDataUrl && !leftSignatureDataUrl) {
+          setLeftSignatureDataUrl(user.leftSignatureDataUrl);
+        }
+        if (user.rightSignatureDataUrl && !rightSignatureDataUrl) {
+          setRightSignatureDataUrl(user.rightSignatureDataUrl);
+        }
+      } catch (err) {
+        console.error("Failed to load saved signatures", err);
+      }
+    };
+
+    loadSavedSignatures();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_BASE]);
 
   const onPick = (f: File | null) => {
@@ -411,6 +441,56 @@ export default function CertificatesPage() {
       alert(err?.message || "Failed to generate PDF");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveReusableSignatures = async () => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in again to save reusable signatures.");
+      return;
+    }
+
+    setSavingSignatures(true);
+    setSavedSignatureStatus("");
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me/signatures`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          leftSignatureDataUrl,
+          rightSignatureDataUrl,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(json?.message || "Failed to save signatures");
+      }
+
+      if (json?.data && typeof window !== "undefined") {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            user.leftSignatureDataUrl = json.data.leftSignatureDataUrl || "";
+            user.rightSignatureDataUrl = json.data.rightSignatureDataUrl || "";
+            localStorage.setItem("user", JSON.stringify(user));
+          } catch {
+            // Ignore malformed cache and continue.
+          }
+        }
+      }
+
+      setSavedSignatureStatus("Saved for reuse.");
+    } catch (err: any) {
+      alert(err?.message || "Failed to save signatures");
+    } finally {
+      setSavingSignatures(false);
     }
   };
 
@@ -659,6 +739,15 @@ export default function CertificatesPage() {
                     <SignaturePad label="Left Signer Signature" value={leftSignatureDataUrl} onChange={setLeftSignatureDataUrl} />
                     <SignaturePad label="Right Signer Signature" value={rightSignatureDataUrl} onChange={setRightSignatureDataUrl} />
                   </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button type="button" variant="outline" onClick={saveReusableSignatures} disabled={savingSignatures}>
+                      {savingSignatures ? "Saving..." : "Save signatures for reuse"}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => { setLeftSignatureDataUrl(""); setRightSignatureDataUrl(""); }}>
+                      Clear signatures
+                    </Button>
+                    {savedSignatureStatus ? <span className="text-sm text-green-600">{savedSignatureStatus}</span> : null}
+                  </div>
                 </div>
               )}
 
@@ -732,9 +821,7 @@ export default function CertificatesPage() {
                           className="mx-auto mb-2 h-[40px] w-[128px] object-contain"
                         />
                       ) : (
-                        <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
-                          Signature
-                        </div>
+                        <div className="h-[40px]" />
                       )}
                       <div className="mt-2 h-px w-[120px] bg-[#7d0f14]" />
                       <div className="mt-2 text-[11px] font-semibold text-[#7d0f14]">{leftSignerName}</div>
@@ -749,9 +836,7 @@ export default function CertificatesPage() {
                           className="mx-auto mb-2 h-[40px] w-[128px] object-contain"
                         />
                       ) : (
-                        <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
-                          Signature
-                        </div>
+                        <div className="h-[40px]" />
                       )}
                       <div className="mt-2 h-px w-[120px] bg-[#7d0f14]" />
                       <div className="mt-2 text-[11px] font-semibold text-[#7d0f14]">{rightSignerName}</div>

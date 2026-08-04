@@ -293,26 +293,8 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawLine({ start: { x: leftSigX - 64, y: sigLineY }, end: { x: leftSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
   page.drawLine({ start: { x: rightSigX - 64, y: sigLineY }, end: { x: rightSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
 
-  const leftSignatureDrawn = await drawSignatureImage(page, pdf, leftSignatureDataUrl, leftSigX, sigLineY);
-  const rightSignatureDrawn = await drawSignatureImage(page, pdf, rightSignatureDataUrl, rightSigX, sigLineY);
-  if (!leftSignatureDrawn) {
-    page.drawText('Signature', {
-      x: leftSigX - script.widthOfTextAtSize('Signature', 16) / 2,
-      y: sigLineY + 22,
-      size: 16,
-      font: script,
-      color: softGray,
-    });
-  }
-  if (!rightSignatureDrawn) {
-    page.drawText('Signature', {
-      x: rightSigX - script.widthOfTextAtSize('Signature', 16) / 2,
-      y: sigLineY + 22,
-      size: 16,
-      font: script,
-      color: softGray,
-    });
-  }
+  await drawSignatureImage(page, pdf, leftSignatureDataUrl, leftSigX, sigLineY);
+  await drawSignatureImage(page, pdf, rightSignatureDataUrl, rightSigX, sigLineY);
 
   page.drawText(leftSignerName, {
     x: leftSigX - bodyBold.widthOfTextAtSize(leftSignerName, 12) / 2,
