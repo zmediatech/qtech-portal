@@ -558,11 +558,10 @@ export default function CertificatesPage() {
                     <div className="absolute right-[68px] bottom-[8px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
                     <div className="absolute right-[84px] bottom-[8px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
                     <div className="absolute right-[48px] top-[48px] h-[16px] w-[58px] bg-[#c28f2c]" />
-                    <div className="absolute right-[66px] top-[48px] h-[40px] w-[40px] rounded-full border-[5px] border-[#d2b05b] bg-[#d7b15b]" />
-                    <div className="absolute right-[78px] top-[60px] flex h-[22px] w-[22px] items-center justify-center rounded-full border border-[#8c1f1f] bg-[#b55d21] text-[6px] font-bold uppercase text-white shadow-sm">
+                    <div className="absolute right-[72px] top-[48px] h-[62px] w-[28px] bg-[#d7b15b]" />
+                    <div className="absolute right-[82px] top-[62px] flex h-[36px] w-[36px] items-center justify-center bg-[#a94f19] text-[7px] font-bold uppercase text-white shadow-sm">
                       {sealText}
                     </div>
-                    <div className="absolute right-[58px] top-[104px] h-[44px] w-[24px] bg-[#d7b15b]" />
 
                     <div className="absolute left-[10px] right-[10px] top-[114px] text-center">
                       <div className="text-[46px] font-bold text-[#7d0f14]" style={{ fontFamily: "Times New Roman, serif" }}>
@@ -602,8 +601,8 @@ export default function CertificatesPage() {
                       <div className="mt-1 text-[9px] font-semibold uppercase text-gray-600">{rightSignerRole}</div>
                     </div>
 
-                    <div className="absolute left-[64px] bottom-[56px] text-[9px] font-semibold text-[#7d0f14]">{companyName}</div>
-                    <div className="absolute left-1/2 bottom-[52px] -translate-x-1/2 text-[9px] uppercase tracking-[0.3em] text-gray-500">
+                    <div className="absolute left-[62px] bottom-[66px] text-[10px] font-semibold text-[#7d0f14]">{companyName}</div>
+                    <div className="absolute left-1/2 bottom-[64px] -translate-x-1/2 text-[9px] uppercase tracking-[0.3em] text-gray-500">
                       {issueDate}
                     </div>
                   </div>

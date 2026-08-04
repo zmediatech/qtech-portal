@@ -194,24 +194,16 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: right - 68, y: bottom + 8, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 84, y: bottom + 8, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 92, y: top - 48, width: 58, height: 16, color: accentGold });
-  page.drawCircle({
-    x: right - 48,
-    y: top - 54,
-    size: 40,
-    borderColor: accentGold,
-    borderWidth: 5,
-    color: rgb(0.88, 0.76, 0.46),
+  page.drawRectangle({ x: right - 73, y: top - 102, width: 28, height: 62, color: accentGold });
+  page.drawRectangle({ x: right - 83, y: top - 93, width: 12, height: 42, color: rgb(0.82, 0.67, 0.34) });
+  page.drawRectangle({ x: right - 61, y: top - 62, width: 36, height: 36, color: rgb(0.74, 0.33, 0.16), borderColor: accentGold, borderWidth: 3 });
+  page.drawText(sealText, {
+    x: right - 53,
+    y: top - 43,
+    size: 8,
+    font: bodyBold,
+    color: paper,
   });
-  page.drawCircle({
-    x: right - 48,
-    y: top - 54,
-    size: 22,
-    borderColor: deepMaroon,
-    borderWidth: 1.5,
-    color: rgb(0.74, 0.33, 0.16),
-  });
-  page.drawRectangle({ x: right - 60, y: top - 104, width: 26, height: 52, color: accentGold });
-  page.drawRectangle({ x: right - 78, y: top - 92, width: 12, height: 40, color: rgb(0.82, 0.67, 0.34) });
 
   const contentCenterX = pageW / 2;
   drawCenteredText(page, title, top - 116, serif, 46, deepMaroon, pageW);
@@ -291,27 +283,11 @@ async function renderPresetCertificate(pdf, payload) {
     color: softGray,
   });
 
-  page.drawCircle({
-    x: right - 74,
-    y: top - 50,
-    size: 32,
-    color: rgb(0.63, 0.28, 0.11),
-    borderColor: accentGold,
-    borderWidth: 4,
-  });
-  page.drawText(sealText, {
-    x: right - 92,
-    y: top - 55,
-    size: 8,
-    font: bodyBold,
-    color: paper,
-  });
-
   if (issueDate) {
     page.drawText(issueDate, {
-      x: pageW / 2 - 26,
-      y: bottom + 12,
-      size: 9.5,
+      x: pageW / 2 - bodyFont.widthOfTextAtSize(issueDate, 9) / 2,
+      y: bottom + 26,
+      size: 9,
       font: bodyFont,
       color: softGray,
     });
@@ -319,7 +295,7 @@ async function renderPresetCertificate(pdf, payload) {
 
   page.drawText(companyName, {
     x: left + 16,
-    y: bottom + 12,
+    y: bottom + 26,
     size: 9.5,
     font: bodyBold,
     color: deepMaroon,
