@@ -156,6 +156,33 @@ function drawAwardBadge(page, centerX, centerY, outerColor, innerColor, textColo
   });
 }
 
+async function embedDataUrlImage(pdf, dataUrl) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex < 0) return null;
+
+  const header = dataUrl.slice(0, commaIndex).toLowerCase();
+  const raw = dataUrl.slice(commaIndex + 1);
+  const bytes = Buffer.from(raw, 'base64');
+
+  if (header.includes('image/png')) return await pdf.embedPng(bytes);
+  if (header.includes('image/jpeg') || header.includes('image/jpg')) return await pdf.embedJpg(bytes);
+  return null;
+}
+
+async function drawSignatureImage(page, pdf, dataUrl, centerX, lineY) {
+  const image = await embedDataUrlImage(pdf, dataUrl);
+  if (!image) return false;
+  const dims = image.scaleToFit(96, 30);
+  page.drawImage(image, {
+    x: centerX - dims.width / 2,
+    y: lineY + 10,
+    width: dims.width,
+    height: dims.height,
+  });
+  return true;
+}
+
 async function renderPresetCertificate(pdf, payload) {
   const {
     recipientName,
@@ -169,6 +196,8 @@ async function renderPresetCertificate(pdf, payload) {
     leftSignerRole = 'Principal',
     rightSignerName = 'Director Name',
     rightSignerRole = 'Director',
+    leftSignatureDataUrl = '',
+    rightSignatureDataUrl = '',
     sealText = 'AWARD',
     issueDate = '',
   } = payload;
@@ -264,6 +293,27 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawLine({ start: { x: leftSigX - 64, y: sigLineY }, end: { x: leftSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
   page.drawLine({ start: { x: rightSigX - 64, y: sigLineY }, end: { x: rightSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
 
+  const leftSignatureDrawn = await drawSignatureImage(page, pdf, leftSignatureDataUrl, leftSigX, sigLineY);
+  const rightSignatureDrawn = await drawSignatureImage(page, pdf, rightSignatureDataUrl, rightSigX, sigLineY);
+  if (!leftSignatureDrawn) {
+    page.drawText('Signature', {
+      x: leftSigX - script.widthOfTextAtSize('Signature', 16) / 2,
+      y: sigLineY + 22,
+      size: 16,
+      font: script,
+      color: softGray,
+    });
+  }
+  if (!rightSignatureDrawn) {
+    page.drawText('Signature', {
+      x: rightSigX - script.widthOfTextAtSize('Signature', 16) / 2,
+      y: sigLineY + 22,
+      size: 16,
+      font: script,
+      color: softGray,
+    });
+  }
+
   page.drawText(leftSignerName, {
     x: leftSigX - bodyBold.widthOfTextAtSize(leftSignerName, 12) / 2,
     y: sigLineY - 10,
@@ -339,6 +389,8 @@ exports.makeCertificate = async (req, res) => {
         leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
         rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
         rightSignerRole: (req.body.rightSignerRole || 'Director').toString(),
+        leftSignatureDataUrl: (req.body.leftSignatureDataUrl || '').toString(),
+        rightSignatureDataUrl: (req.body.rightSignatureDataUrl || '').toString(),
         sealText: (req.body.sealText || 'AWARD').toString(),
         issueDate: (req.body.issueDate || '').toString(),
         templateId,

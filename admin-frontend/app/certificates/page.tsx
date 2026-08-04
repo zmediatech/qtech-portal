@@ -44,6 +44,147 @@ function canvasFont(fontStyle: string, fontSize: number, fontFamily: string) {
   return `${italic} ${weight} ${fontSize}px ${fontFamily}`;
 }
 
+type SignaturePadProps = {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+};
+
+function SignaturePad({ label, value, onChange }: SignaturePadProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resizeAndDraw = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.max(1, Math.round(width * dpr));
+      canvas.height = Math.max(1, Math.round(height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 2.5;
+
+      if (value) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, width, height);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          const scale = Math.min((width - 12) / img.width, (height - 12) / img.height, 1);
+          const drawW = img.width * scale;
+          const drawH = img.height * scale;
+          ctx.drawImage(img, (width - drawW) / 2, (height - drawH) / 2, drawW, drawH);
+        };
+        img.src = value;
+      }
+    };
+
+    resizeAndDraw();
+    window.addEventListener("resize", resizeAndDraw);
+    return () => window.removeEventListener("resize", resizeAndDraw);
+  }, [value]);
+
+  const getPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  const paint = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+  };
+
+  const commitValue = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    onChange(canvas.toDataURL("image/png"));
+  };
+
+  const clear = () => {
+    onChange("");
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border bg-background p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label>{label}</Label>
+          <p className="text-xs text-muted-foreground">Draw with your mouse or touch.</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={clear}>
+          Clear
+        </Button>
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="h-28 w-full rounded-md border bg-white touch-none"
+        onPointerDown={(event) => {
+          const canvas = canvasRef.current;
+          const point = getPoint(event);
+          if (!canvas || !point) return;
+          canvas.setPointerCapture(event.pointerId);
+          drawingRef.current = true;
+          lastPointRef.current = point;
+        }}
+        onPointerMove={(event) => {
+          if (!drawingRef.current) return;
+          const point = getPoint(event);
+          const lastPoint = lastPointRef.current;
+          if (!point || !lastPoint) return;
+          paint(lastPoint, point);
+          lastPointRef.current = point;
+        }}
+        onPointerUp={() => {
+          if (!drawingRef.current) return;
+          drawingRef.current = false;
+          lastPointRef.current = null;
+          commitValue();
+        }}
+        onPointerLeave={() => {
+          if (!drawingRef.current) return;
+          drawingRef.current = false;
+          lastPointRef.current = null;
+          commitValue();
+        }}
+        onPointerCancel={() => {
+          if (!drawingRef.current) return;
+          drawingRef.current = false;
+          lastPointRef.current = null;
+          commitValue();
+        }}
+      />
+    </div>
+  );
+}
+
 type Student = {
   _id: string;
   regNo: string;
@@ -93,6 +234,8 @@ export default function CertificatesPage() {
   const [leftSignerRole, setLeftSignerRole] = useState("Principal");
   const [rightSignerName, setRightSignerName] = useState("Director Name");
   const [rightSignerRole, setRightSignerRole] = useState("Director");
+  const [leftSignatureDataUrl, setLeftSignatureDataUrl] = useState("");
+  const [rightSignatureDataUrl, setRightSignatureDataUrl] = useState("");
   const [sealText, setSealText] = useState("AWARD");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -227,6 +370,8 @@ export default function CertificatesPage() {
       fd.append("leftSignerRole", leftSignerRole.trim());
       fd.append("rightSignerName", rightSignerName.trim());
       fd.append("rightSignerRole", rightSignerRole.trim());
+      fd.append("leftSignatureDataUrl", leftSignatureDataUrl);
+      fd.append("rightSignatureDataUrl", rightSignatureDataUrl);
       fd.append("sealText", sealText.trim());
       fd.append("issueDate", issueDate);
 
@@ -514,6 +659,10 @@ export default function CertificatesPage() {
                       <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
                     </div>
                   </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <SignaturePad label="Left Signer Signature" value={leftSignatureDataUrl} onChange={setLeftSignatureDataUrl} />
+                    <SignaturePad label="Right Signer Signature" value={rightSignatureDataUrl} onChange={setRightSignatureDataUrl} />
+                  </div>
                 </div>
               )}
 
@@ -580,18 +729,34 @@ export default function CertificatesPage() {
                     </div>
 
                     <div className="absolute bottom-[142px] left-[150px] text-center">
-                      <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
-                        Signature
-                      </div>
+                      {leftSignatureDataUrl ? (
+                        <img
+                          src={leftSignatureDataUrl}
+                          alt="Left signer signature"
+                          className="mx-auto mb-2 h-[34px] w-[118px] object-contain"
+                        />
+                      ) : (
+                        <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
+                          Signature
+                        </div>
+                      )}
                       <div className="mt-2 h-px w-[120px] bg-[#7d0f14]" />
                       <div className="mt-2 text-[11px] font-semibold text-[#7d0f14]">{leftSignerName}</div>
                       <div className="mt-1 text-[9px] font-semibold uppercase text-gray-600">{leftSignerRole}</div>
                     </div>
 
                     <div className="absolute bottom-[142px] right-[150px] text-center">
-                      <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
-                        Signature
-                      </div>
+                      {rightSignatureDataUrl ? (
+                        <img
+                          src={rightSignatureDataUrl}
+                          alt="Right signer signature"
+                          className="mx-auto mb-2 h-[34px] w-[118px] object-contain"
+                        />
+                      ) : (
+                        <div className="text-[15px] italic text-[#4b4b4b]" style={{ fontFamily: "cursive" }}>
+                          Signature
+                        </div>
+                      )}
                       <div className="mt-2 h-px w-[120px] bg-[#7d0f14]" />
                       <div className="mt-2 text-[11px] font-semibold text-[#7d0f14]">{rightSignerName}</div>
                       <div className="mt-1 text-[9px] font-semibold uppercase text-gray-600">{rightSignerRole}</div>
