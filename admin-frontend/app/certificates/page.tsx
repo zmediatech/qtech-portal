@@ -551,15 +551,18 @@ export default function CertificatesPage() {
                     <div className="absolute left-[48px] right-[48px] bottom-[48px] h-[18px] bg-[#7d0f14]" />
                     <div className="absolute left-[46px] top-[48px] h-[95px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute left-[60px] top-[48px] h-[95px] w-[4px] bg-[#efd37a]" />
+                    <div className="absolute left-[90px] top-[18px] h-[92px] w-[9px] rotate-[-32deg] bg-[#fff8eb]" />
                     <div className="absolute left-[78px] top-[20px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
                     <div className="absolute left-[94px] top-[20px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
+                    <div className="absolute right-[102px] bottom-[2px] h-[92px] w-[9px] rotate-[-32deg] bg-[#fff8eb]" />
                     <div className="absolute right-[68px] bottom-[8px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
                     <div className="absolute right-[84px] bottom-[8px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
                     <div className="absolute right-[48px] top-[48px] h-[16px] w-[58px] bg-[#c28f2c]" />
-                    <div className="absolute right-[72px] top-[50px] flex h-[32px] w-[32px] items-center justify-center rounded-full border-[4px] border-[#d2b05b] bg-[#b55d21] text-[7px] font-bold uppercase text-white shadow-sm">
+                    <div className="absolute right-[66px] top-[48px] h-[40px] w-[40px] rounded-full border-[5px] border-[#d2b05b] bg-[#d7b15b]" />
+                    <div className="absolute right-[78px] top-[60px] flex h-[22px] w-[22px] items-center justify-center rounded-full border border-[#8c1f1f] bg-[#b55d21] text-[6px] font-bold uppercase text-white shadow-sm">
                       {sealText}
                     </div>
-                    <div className="absolute right-[62px] top-[42px] h-[58px] w-[24px] bg-[#d7b15b]" />
+                    <div className="absolute right-[58px] top-[104px] h-[44px] w-[24px] bg-[#d7b15b]" />
 
                     <div className="absolute left-[10px] right-[10px] top-[114px] text-center">
                       <div className="text-[46px] font-bold text-[#7d0f14]" style={{ fontFamily: "Times New Roman, serif" }}>

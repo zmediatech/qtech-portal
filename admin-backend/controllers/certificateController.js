@@ -187,28 +187,31 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: left + 12, y: top - 115, width: 4, height: 95, color: softGold });
   page.drawRectangle({ x: right - 14, y: bottom + 30, width: 4, height: 100, color: softGold });
   page.drawRectangle({ x: right - 18, y: bottom + 30, width: 14, height: 100, color: accentGold });
+  page.drawRectangle({ x: left + 52, y: top - 24, width: 9, height: 92, color: paper, rotate: degrees(-32) });
   page.drawRectangle({ x: left + 38, y: top - 18, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
   page.drawRectangle({ x: left + 54, y: top - 18, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: right - 88, y: bottom + 4, width: 9, height: 92, color: paper, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 68, y: bottom + 8, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 84, y: bottom + 8, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 92, y: top - 48, width: 58, height: 16, color: accentGold });
   page.drawCircle({
-    x: right - 46,
+    x: right - 48,
     y: top - 54,
-    size: 36,
+    size: 40,
     borderColor: accentGold,
     borderWidth: 5,
-    color: rgb(0.85, 0.72, 0.41),
+    color: rgb(0.88, 0.76, 0.46),
   });
   page.drawCircle({
-    x: right - 46,
+    x: right - 48,
     y: top - 54,
     size: 22,
     borderColor: deepMaroon,
     borderWidth: 1.5,
     color: rgb(0.74, 0.33, 0.16),
   });
-  page.drawRectangle({ x: right - 58, y: top - 100, width: 24, height: 46, color: accentGold });
+  page.drawRectangle({ x: right - 60, y: top - 104, width: 26, height: 52, color: accentGold });
+  page.drawRectangle({ x: right - 78, y: top - 92, width: 12, height: 40, color: rgb(0.82, 0.67, 0.34) });
 
   const contentCenterX = pageW / 2;
   drawCenteredText(page, title, top - 116, serif, 46, deepMaroon, pageW);
