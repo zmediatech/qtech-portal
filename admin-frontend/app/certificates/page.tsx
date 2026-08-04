@@ -188,6 +188,12 @@ type Student = {
   className?: string;
 };
 
+type CourseItem = {
+  _id: string;
+  name: string;
+  code?: string;
+};
+
 export default function CertificatesPage() {
   const API_BASE = useMemo(
     () => (process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app").replace(/\/$/, ""),
@@ -196,6 +202,8 @@ export default function CertificatesPage() {
 
   const [open, setOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<CourseItem[]>([]);
+  const [subjects, setSubjects] = useState<CourseItem[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [name, setName] = useState("");
 
@@ -226,6 +234,7 @@ export default function CertificatesPage() {
   const [description, setDescription] = useState("For outstanding dedication, achievement, and contribution to the institution.");
   const [academyName, setAcademyName] = useState("Academy Name");
   const [companyName, setCompanyName] = useState("Company Name");
+  const [courseName, setCourseName] = useState("");
   const [leftSignerName, setLeftSignerName] = useState("Principal Name");
   const [leftSignerRole, setLeftSignerRole] = useState("Principal");
   const [rightSignerName, setRightSignerName] = useState("Director Name");
@@ -261,6 +270,40 @@ export default function CertificatesPage() {
       }
     };
     fetchStudents();
+  }, [API_BASE]);
+
+  useEffect(() => {
+    const fetchCourseSources = async () => {
+      try {
+        const [classesRes, subjectsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/classes`, { cache: "no-store" }),
+          fetch(`${API_BASE}/api/subjects`, { cache: "no-store" }),
+        ]);
+
+        const classesJson = await classesRes.json().catch(() => null);
+        const subjectsJson = await subjectsRes.json().catch(() => null);
+
+        const classList = Array.isArray(classesJson)
+          ? classesJson
+          : Array.isArray(classesJson?.data)
+            ? classesJson.data
+            : [];
+        const subjectList = Array.isArray(subjectsJson)
+          ? subjectsJson
+          : Array.isArray(subjectsJson?.data)
+            ? subjectsJson.data
+            : [];
+
+        setClasses(classList);
+        setSubjects(subjectList);
+      } catch (err) {
+        console.error("Failed to load class/subject course sources", err);
+        setClasses([]);
+        setSubjects([]);
+      }
+    };
+
+    fetchCourseSources();
   }, [API_BASE]);
 
   useEffect(() => {
@@ -392,6 +435,7 @@ export default function CertificatesPage() {
       fd.append("description", description.trim());
       fd.append("academyName", academyName.trim());
       fd.append("companyName", companyName.trim());
+      fd.append("courseName", courseName.trim());
       fd.append("leftSignerName", leftSignerName.trim());
       fd.append("leftSignerRole", leftSignerRole.trim());
       fd.append("rightSignerName", rightSignerName.trim());
@@ -442,6 +486,18 @@ export default function CertificatesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyCourseFromClass = (classId: string) => {
+    const selected = classes.find((item) => item._id === classId);
+    if (!selected) return;
+    setCourseName(selected.code ? `${selected.code} - ${selected.name}` : selected.name);
+  };
+
+  const applyCourseFromSubject = (subjectId: string) => {
+    const selected = subjects.find((item) => item._id === subjectId);
+    if (!selected) return;
+    setCourseName(selected.code ? `${selected.code} - ${selected.name}` : selected.name);
   };
 
   const saveReusableSignatures = async () => {
@@ -705,6 +761,42 @@ export default function CertificatesPage() {
                       <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Course / Program Name</Label>
+                    <Input
+                      value={courseName}
+                      onChange={(e) => setCourseName(e.target.value)}
+                      placeholder="Use for completion certificates"
+                    />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <Select onValueChange={applyCourseFromClass}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Use class name" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {classes.map((item) => (
+                            <SelectItem key={item._id} value={item._id}>
+                              {item.code ? `${item.code} - ` : ""}
+                              {item.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select onValueChange={applyCourseFromSubject}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Use subject name" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjects.map((item) => (
+                            <SelectItem key={item._id} value={item._id}>
+                              {item.code ? `${item.code} - ` : ""}
+                              {item.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Left Signer Name</Label>
@@ -806,6 +898,11 @@ export default function CertificatesPage() {
                         {name || "Recipient Name"}
                       </div>
                       <div className="mt-5 text-[15px] font-semibold text-[#5c5c5c]">{academyName}</div>
+                      {courseName ? (
+                        <div className="mt-2 text-[14px] font-semibold text-[#7d0f14]">
+                          {courseName}
+                        </div>
+                      ) : null}
                       <div className="mx-auto mt-6 max-w-[470px] text-[10px] leading-[15px] text-[#5c5c5c]">
                         {previewDescriptionLines.map((line) => (
                           <div key={line}>{line}</div>

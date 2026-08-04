@@ -17,6 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "https://qtech-backend.vercel.app"
+
 // Dynamically import AdminLayout to prevent SSR
 const AdminLayout = dynamic(
   () => import("@/components/admin-layout").then(mod => ({ default: mod.AdminLayout })),
@@ -46,7 +51,7 @@ function ClassesContent() {
   const fetchClasses = async () => {
     try {
       setLoading(true)
-      const response = await fetch('https://qtech-backend.vercel.app/api/classes')
+      const response = await fetch(`${API_BASE}/api/classes`, { cache: "no-store" })
       const result = await response.json()
 
       if (!response.ok) {
@@ -71,7 +76,7 @@ function ClassesContent() {
   const handleDelete = async (id: string) => {
     try {
       setDeleting(true)
-      const response = await fetch(`https://qtech-backend.vercel.app/api/classes/${id}`, {
+      const response = await fetch(`${API_BASE}/api/classes/${id}`, {
         method: 'DELETE',
       })
       const result = await response.json()

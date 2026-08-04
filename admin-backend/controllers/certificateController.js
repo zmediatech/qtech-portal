@@ -192,6 +192,7 @@ async function renderPresetCertificate(pdf, payload) {
     description = 'In recognition of dedication, effort, and achievement.',
     academyName = 'Academy Name',
     companyName = 'Company Name',
+    courseName = '',
     leftSignerName = 'Principal Name',
     leftSignerRole = 'Principal',
     rightSignerName = 'Director Name',
@@ -257,6 +258,9 @@ async function renderPresetCertificate(pdf, payload) {
   });
 
   drawCenteredText(page, academyName, top - 186, bodyBold, 15, mutedGray, pageW);
+  if (String(courseName || '').trim()) {
+    drawCenteredText(page, courseName, top - 210, bodyBold, 13, deepMaroon, pageW);
+  }
   drawCenteredText(page, bodyLine, top - 232, bodyFont, 10.5, mutedGray, pageW);
 
   const nameFont = script;
@@ -276,20 +280,6 @@ async function renderPresetCertificate(pdf, payload) {
   const sigLineY = bottom + 72;
   const leftSigX = left + 118;
   const rightSigX = right - 118;
-  page.drawText('Signature', {
-    x: leftSigX - script.widthOfTextAtSize('Signature', 16) / 2,
-    y: sigLineY + 22,
-    size: 16,
-    font: script,
-    color: softGray,
-  });
-  page.drawText('Signature', {
-    x: rightSigX - script.widthOfTextAtSize('Signature', 16) / 2,
-    y: sigLineY + 22,
-    size: 16,
-    font: script,
-    color: softGray,
-  });
   page.drawLine({ start: { x: leftSigX - 64, y: sigLineY }, end: { x: leftSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
   page.drawLine({ start: { x: rightSigX - 64, y: sigLineY }, end: { x: rightSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
 
@@ -367,6 +357,7 @@ exports.makeCertificate = async (req, res) => {
         description: (req.body.description || 'In recognition of dedication, effort, and achievement.').toString(),
         academyName: (req.body.academyName || 'Academy Name').toString(),
         companyName: (req.body.companyName || 'Company Name').toString(),
+        courseName: (req.body.courseName || '').toString(),
         leftSignerName: (req.body.leftSignerName || 'Principal Name').toString(),
         leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
         rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
