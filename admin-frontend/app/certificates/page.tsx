@@ -557,6 +557,7 @@ export default function CertificatesPage() {
                     <div className="absolute right-[102px] bottom-[2px] h-[92px] w-[9px] rotate-[-32deg] bg-[#fff8eb]" />
                     <div className="absolute right-[68px] bottom-[8px] h-[108px] w-[10px] rotate-[-32deg] bg-[#efd37a]" />
                     <div className="absolute right-[84px] bottom-[8px] h-[108px] w-[6px] rotate-[-32deg] bg-[#c28f2c]" />
+                    <div className="absolute right-[22px] bottom-[30px] h-[84px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute right-[22px] top-[18px] h-[56px] w-[56px]">
                       {Array.from({ length: 12 }).map((_, i) => {
                         const angle = (i * 360) / 12;

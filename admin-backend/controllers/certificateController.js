@@ -241,6 +241,7 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: right - 88, y: bottom + 4, width: 9, height: 92, color: paper, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 68, y: bottom + 8, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 84, y: bottom + 8, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: right - 22, y: bottom + 30, width: 14, height: 84, color: accentGold });
   drawAwardBadge(page, right - 52, top - 48, deepMaroon, accentGold, paper, sealText, bodyBold);
 
   const contentCenterX = pageW / 2;
