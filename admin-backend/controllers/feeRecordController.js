@@ -7,9 +7,13 @@ function buildListQuery({ q, status, classId, from, to }) {
 
   if (q) {
     const trimmed = String(q).trim();
+    const safe = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     where.$or = [
-      { $text: { $search: trimmed } },
-      { regNo: new RegExp(`^${trimmed}`, 'i') },
+      { regNo: new RegExp(safe, 'i') },
+      { studentName: new RegExp(safe, 'i') },
+      { className: new RegExp(safe, 'i') },
+      { feeType: new RegExp(safe, 'i') },
+      { referenceNo: new RegExp(safe, 'i') },
     ];
   }
 

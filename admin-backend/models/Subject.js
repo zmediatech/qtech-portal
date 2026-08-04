@@ -13,6 +13,5 @@ const SubjectSchema = new Schema(
 
 
 SubjectSchema.index({ name: 1 });
-SubjectSchema.index({ code: 1 }, { unique: true });
 
 module.exports = model('Subject', SubjectSchema);

@@ -17,8 +17,7 @@ const feeRecordSchema = new mongoose.Schema(
   {
     // Core relations
     student:   { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
-    // If your model is actually 'Class' (from models/Class.js), CHANGE 'Classroom' -> 'Class'
-    classroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Classroom', required: true },
+    classroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
 
     // Denormalized (for fast table/search without populate)
     regNo:       { type: String, required: true, trim: true },
@@ -58,9 +57,8 @@ feeRecordSchema.pre('validate', async function (next) {
       }
     }
     if (!this.className && this.classroom) {
-      // If your model is 'Class', change to mongoose.model('Class')
-      const Classroom = mongoose.model('Classroom');
-      const c = await Classroom.findById(this.classroom).select('name');
+      const ClassModel = mongoose.model('Class');
+      const c = await ClassModel.findById(this.classroom).select('name');
       if (c?.name) this.className = c.name;
     }
     next();

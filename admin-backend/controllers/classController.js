@@ -51,8 +51,7 @@ async function getAllClasses(_req, res) {
     const list = await ClassModel.find()
       .populate('subjects', 'name code')
       .populate('students', 'name regNo') // physical
-      .populate({ path: 'studentsVirtual', select: 'name regNo' }) // virtual
-      .lean({ virtuals: true });
+      .lean();
 
     const data = (list || []).map(normalizeClass);
     return res.status(200).json({ success: true, count: data.length, data });
@@ -67,8 +66,7 @@ async function getClassById(req, res) {
     const found = await ClassModel.findById(req.params.id)
       .populate('subjects', 'name code')
       .populate('students', 'name regNo')
-      .populate({ path: 'studentsVirtual', select: 'name regNo' })
-      .lean({ virtuals: true });
+      .lean();
 
     if (!found) return res.status(404).json({ success: false, message: 'Class not found' });
     const data = normalizeClass(found);
@@ -96,8 +94,7 @@ async function updateClass(req, res) {
     })
       .populate('subjects', 'name code')
       .populate('students', 'name regNo')
-      .populate({ path: 'studentsVirtual', select: 'name regNo' })
-      .lean({ virtuals: true });
+      .lean();
 
     if (!updated) return res.status(404).json({ success: false, message: 'Class not found' });
     const data = normalizeClass(updated);
