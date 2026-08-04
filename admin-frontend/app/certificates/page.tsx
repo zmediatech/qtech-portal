@@ -552,13 +552,8 @@ export default function CertificatesPage() {
                     <div className="absolute left-[48px] right-[48px] bottom-[48px] h-[18px] bg-[#7d0f14]" />
                     <div className="absolute left-[46px] top-[48px] h-[95px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute left-[60px] top-[48px] h-[95px] w-[4px] bg-[#efd37a]" />
-                    <div className="absolute right-[22px] bottom-[30px] h-[84px] w-[14px] bg-[#c28f2c]" />
                     <div className="absolute right-[22px] top-[18px] h-[56px] w-[56px]">
-                      <div className="absolute left-1/2 top-1/2 h-[26px] w-[26px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-[#d8b45e] bg-[#8d1220]" />
-                      <div className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#8d1220] bg-[#d8b45e]" />
-                      <div className="absolute left-1/2 top-1/2 h-[34px] w-[12px] -translate-x-1/2 translate-y-[14px] bg-[#d8b45e]" />
-                      <div className="absolute left-[9px] top-[30px] h-[24px] w-[7px] bg-[#c28f2c]" />
-                      <div className="absolute right-[9px] top-[30px] h-[24px] w-[7px] bg-[#c28f2c]" />
+                      <div className="absolute left-1/2 top-1/2 h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-[#d8b45e] bg-[#8d1220]" />
                       <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center text-[7px] font-bold uppercase text-white">
                         {sealText}
                       </div>

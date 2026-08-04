@@ -146,11 +146,6 @@ function drawAwardBadge(page, centerX, centerY, outerColor, innerColor, textColo
     borderWidth: 4,
   });
 
-  const ribbonTop = centerY - 24;
-  page.drawRectangle({ x: centerX - 6, y: ribbonTop - 22, width: 12, height: 38, color: innerColor });
-  page.drawRectangle({ x: centerX - 18, y: ribbonTop - 14, width: 8, height: 32, color: rgb(0.82, 0.67, 0.34) });
-  page.drawRectangle({ x: centerX + 10, y: ribbonTop - 14, width: 8, height: 32, color: rgb(0.82, 0.67, 0.34) });
-
   const labelWidth = font.widthOfTextAtSize(text, 8);
   page.drawText(text, {
     x: centerX - labelWidth / 2,
@@ -220,7 +215,6 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: left + 12, y: top - 115, width: 4, height: 95, color: softGold });
   page.drawRectangle({ x: right - 14, y: bottom + 30, width: 4, height: 100, color: softGold });
   page.drawRectangle({ x: right - 18, y: bottom + 30, width: 14, height: 100, color: accentGold });
-  page.drawRectangle({ x: right - 22, y: bottom + 30, width: 14, height: 84, color: accentGold });
   drawAwardBadge(page, right - 52, top - 48, deepMaroon, accentGold, paper, sealText, bodyBold);
 
   const contentCenterX = pageW / 2;
