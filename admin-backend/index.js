@@ -17,6 +17,7 @@ require("./models/FeeRecord");
 require("./models/Expense");
 require("./models/Mark");
 require("./models/User");
+require("./models/Certificate");
 
 // --- Routers
 const subjectRoutes = require("./routes/subjectRoutes");

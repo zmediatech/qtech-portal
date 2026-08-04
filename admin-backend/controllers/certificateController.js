@@ -2,6 +2,9 @@
 const { PDFDocument, StandardFonts, rgb, degrees } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const connectDB = require('../config/db');
+const CertificateModel = require('../models/Certificate');
 
 const DEFAULT_CUSTOM_FONT = path.join(__dirname, '..', 'fonts', 'GreatVibes-Regular.ttf');
 const CUSTOM_FONT_PATH = process.env.CERT_FONT_PATH || DEFAULT_CUSTOM_FONT;
@@ -183,6 +186,26 @@ async function drawSignatureImage(page, pdf, dataUrl, centerX, lineY) {
   return true;
 }
 
+function generateCertificateId() {
+  return `CERT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+}
+
+async function ensureUniqueCertificateId() {
+  let attempts = 0;
+  while (attempts < 8) {
+    const candidate = generateCertificateId();
+    const exists = await CertificateModel.exists({ certificateId: candidate });
+    if (!exists) return candidate;
+    attempts += 1;
+  }
+  return `CERT-${Date.now().toString(36).toUpperCase()}`;
+}
+
+async function saveCertificateRecord(record) {
+  await connectDB(process.env.MONGODB_URI);
+  return await CertificateModel.create(record);
+}
+
 async function renderPresetCertificate(pdf, payload) {
   const {
     recipientName,
@@ -201,6 +224,7 @@ async function renderPresetCertificate(pdf, payload) {
     rightSignatureDataUrl = '',
     sealText = 'AWARD',
     issueDate = '',
+    certificateId = '',
   } = payload;
 
   const page = pdf.addPage(A4_LANDSCAPE);
@@ -335,45 +359,65 @@ async function renderPresetCertificate(pdf, payload) {
     color: deepMaroon,
   });
 
+  if (certificateId) {
+    const certLabel = `ID: ${certificateId}`;
+    page.drawText(certLabel, {
+      x: right - bodyFont.widthOfTextAtSize(certLabel, 8.5),
+      y: bottom + 26,
+      size: 8.5,
+      font: bodyFont,
+      color: softGray,
+    });
+  }
+
   return page;
 }
 
 exports.makeCertificate = async (req, res) => {
   try {
+    await connectDB(process.env.MONGODB_URI);
     const file = req.file;
     const name = (req.body.name || '').toString().trim();
     if (!name) return res.status(400).json({ success: false, message: 'Student name is required' });
 
     const mode = (req.body.mode || 'upload').toString();
     const templateId = (req.body.templateId || 'classic-maroon-gold').toString();
+    const certificateId = await ensureUniqueCertificateId();
+
+    const record = {
+      certificateId,
+      recipientName: name,
+      title: (req.body.title || 'Certificate').toString(),
+      subtitle: (req.body.subtitle || 'OF APPRECIATION').toString(),
+      bodyLine: (req.body.bodyLine || 'THIS CERTIFICATE IS PROUDLY PRESENTED TO').toString(),
+      description: (req.body.description || 'In recognition of dedication, effort, and achievement.').toString(),
+      academyName: (req.body.academyName || 'Academy Name').toString(),
+      companyName: (req.body.companyName || 'Company Name').toString(),
+      courseName: (req.body.courseName || '').toString(),
+      leftSignerName: (req.body.leftSignerName || 'Principal Name').toString(),
+      leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
+      rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
+      rightSignerRole: (req.body.rightSignerRole || 'Director').toString(),
+      leftSignatureDataUrl: (req.body.leftSignatureDataUrl || '').toString(),
+      rightSignatureDataUrl: (req.body.rightSignatureDataUrl || '').toString(),
+      sealText: (req.body.sealText || 'AWARD').toString(),
+      issueDate: (req.body.issueDate || '').toString(),
+      templateId,
+      mode,
+      verified: true,
+    };
 
     if (mode === 'template' || !file) {
       const pdf = await PDFDocument.create();
-      await renderPresetCertificate(pdf, {
-        recipientName: name,
-        title: (req.body.title || 'Certificate').toString(),
-        subtitle: (req.body.subtitle || 'OF APPRECIATION').toString(),
-        bodyLine: (req.body.bodyLine || 'THIS CERTIFICATE IS PROUDLY PRESENTED TO').toString(),
-        description: (req.body.description || 'In recognition of dedication, effort, and achievement.').toString(),
-        academyName: (req.body.academyName || 'Academy Name').toString(),
-        companyName: (req.body.companyName || 'Company Name').toString(),
-        courseName: (req.body.courseName || '').toString(),
-        leftSignerName: (req.body.leftSignerName || 'Principal Name').toString(),
-        leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
-        rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
-        rightSignerRole: (req.body.rightSignerRole || 'Director').toString(),
-        leftSignatureDataUrl: (req.body.leftSignatureDataUrl || '').toString(),
-        rightSignatureDataUrl: (req.body.rightSignatureDataUrl || '').toString(),
-        sealText: (req.body.sealText || 'AWARD').toString(),
-        issueDate: (req.body.issueDate || '').toString(),
-        templateId,
-      });
+      await renderPresetCertificate(pdf, { ...record, recipientName: name });
 
       const bytes = await pdf.save();
       const safe = name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+      await saveCertificateRecord({ ...record, pdfData: Buffer.from(bytes) });
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="certificate-${safe}.pdf"`);
+      res.setHeader('X-Certificate-Id', certificateId);
       return res.send(Buffer.from(bytes));
     }
 
@@ -470,14 +514,100 @@ exports.makeCertificate = async (req, res) => {
       characterSpacing: charSpacing || undefined,
     });
 
+    const certIdLabel = `ID: ${certificateId}`;
+    const footerFont = await pdf.embedFont(StandardFonts.Helvetica);
+    page.drawText(certIdLabel, {
+      x: pageW / 2 - footerFont.widthOfTextAtSize(certIdLabel, 8) / 2,
+      y: 22,
+      size: 8,
+      font: footerFont,
+      color: rgb(0.43, 0.43, 0.43),
+    });
+
     const bytes = await pdf.save();
     const safe = name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    await saveCertificateRecord({ ...record, pdfData: Buffer.from(bytes) });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="certificate-${safe}.pdf"`);
+    res.setHeader('X-Certificate-Id', certificateId);
     res.send(Buffer.from(bytes));
   } catch (err) {
     console.error('makeCertificate error:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+function toPublicCertificate(doc) {
+  if (!doc) return null;
+  const plain = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+  delete plain.pdfData;
+  return plain;
+}
+
+exports.getAllCertificates = async (_req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const list = await CertificateModel.find().sort({ createdAt: -1 }).lean();
+    return res.status(200).json({ success: true, count: list.length, data: list.map(toPublicCertificate) });
+  } catch (err) {
+    console.error('getAllCertificates error:', err);
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+exports.getCertificateById = async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const { certificateId } = req.params;
+    const found = await CertificateModel.findOne({ certificateId }).lean();
+    if (!found) {
+      return res.status(404).json({ success: false, message: 'Certificate not found' });
+    }
+    return res.status(200).json({ success: true, data: toPublicCertificate(found) });
+  } catch (err) {
+    console.error('getCertificateById error:', err);
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+exports.getCertificatePdf = async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const { certificateId } = req.params;
+    const found = await CertificateModel.findOne({ certificateId }).lean();
+    if (!found) {
+      return res.status(404).json({ success: false, message: 'Certificate not found' });
+    }
+    if (!found.pdfData) {
+      return res.status(404).json({ success: false, message: 'Certificate PDF not available' });
+    }
+
+    const safe = String(found.recipientName || 'certificate').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="certificate-${safe}.pdf"`);
+    return res.send(Buffer.isBuffer(found.pdfData) ? found.pdfData : Buffer.from(found.pdfData.data || found.pdfData));
+  } catch (err) {
+    console.error('getCertificatePdf error:', err);
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+};
+
+exports.verifyCertificate = async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    const { certificateId } = req.params;
+    const found = await CertificateModel.findOne({ certificateId }).lean();
+    if (!found) {
+      return res.status(404).json({ success: false, verified: false, message: 'Certificate not found' });
+    }
+    return res.status(200).json({
+      success: true,
+      verified: true,
+      data: toPublicCertificate(found),
+    });
+  } catch (err) {
+    console.error('verifyCertificate error:', err);
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

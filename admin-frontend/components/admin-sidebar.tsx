@@ -62,8 +62,11 @@ const navigation = [
   },
   {
     name: "Certificates",
-    href: "/certificates",
     icon: Award,
+    children: [
+      { name: "Create Certificate", href: "/certificates" },
+      { name: "All Certificates", href: "/certificates/all" },
+    ],
   },
   {
     name: "Administrative",
