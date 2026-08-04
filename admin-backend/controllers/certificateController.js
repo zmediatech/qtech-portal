@@ -1,5 +1,5 @@
 // controllers/certificateController.js
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb, degrees } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
 
@@ -171,7 +171,6 @@ async function renderPresetCertificate(pdf, payload) {
   const bodyBold = await loadFont(pdf, 'Helvetica', 'bold');
 
   // Background
-  const outer = 28;
   const inner = 48;
   const left = inner;
   const right = pageW - inner;
@@ -189,23 +188,28 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: left + 12, y: top - 115, width: 4, height: 95, color: softGold });
   page.drawRectangle({ x: right - 14, y: bottom + 30, width: 4, height: 100, color: softGold });
   page.drawRectangle({ x: right - 18, y: bottom + 30, width: 14, height: 100, color: accentGold });
-  page.drawRectangle({ x: right - 86, y: top - 44, width: 56, height: 16, color: accentGold });
+  page.drawRectangle({ x: left + 38, y: top - 18, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: left + 54, y: top - 18, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: right - 68, y: bottom + 8, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: right - 84, y: bottom + 8, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
+  page.drawRectangle({ x: right - 92, y: top - 48, width: 58, height: 16, color: accentGold });
   page.drawCircle({
-    x: right - 44,
-    y: top - 52,
-    size: 34,
+    x: right - 46,
+    y: top - 54,
+    size: 36,
     borderColor: accentGold,
     borderWidth: 5,
     color: rgb(0.85, 0.72, 0.41),
   });
   page.drawCircle({
-    x: right - 44,
-    y: top - 52,
+    x: right - 46,
+    y: top - 54,
     size: 22,
     borderColor: deepMaroon,
     borderWidth: 1.5,
     color: rgb(0.74, 0.33, 0.16),
   });
+  page.drawRectangle({ x: right - 58, y: top - 100, width: 24, height: 46, color: accentGold });
 
   // Main card
   page.drawRectangle({
@@ -219,81 +223,95 @@ async function renderPresetCertificate(pdf, payload) {
   });
 
   const contentCenterX = pageW / 2;
-  drawCenteredText(page, title, top - 126, serif, 46, deepMaroon, pageW);
-  drawCenteredText(page, subtitle, top - 160, bodyBold, 15, deepMaroon, pageW);
+  drawCenteredText(page, title, top - 116, serif, 46, deepMaroon, pageW);
+  drawCenteredText(page, subtitle, top - 150, bodyBold, 13, deepMaroon, pageW);
   page.drawLine({
-    start: { x: contentCenterX - 62, y: top - 168 },
-    end: { x: contentCenterX + 62, y: top - 168 },
+    start: { x: contentCenterX - 56, y: top - 158 },
+    end: { x: contentCenterX + 56, y: top - 158 },
     thickness: 1.4,
     color: softGold,
   });
 
-  drawCenteredText(page, academyName, top - 205, bodyBold, 16, mutedGray, pageW);
-  drawCenteredText(page, bodyLine, top - 255, bodyFont, 12.5, mutedGray, pageW);
+  drawCenteredText(page, academyName, top - 186, bodyBold, 15, mutedGray, pageW);
+  drawCenteredText(page, bodyLine, top - 232, bodyFont, 10.5, mutedGray, pageW);
 
   const nameFont = script;
-  const nameSize = 34;
+  const nameSize = 35;
   const nameWidth = nameFont.widthOfTextAtSize(recipientName, nameSize);
   page.drawText(recipientName, {
     x: (pageW - nameWidth) / 2,
-    y: top - 320,
+    y: top - 284,
     size: nameSize,
     font: nameFont,
     color: deepMaroon,
   });
 
-  drawWrappedCentered(page, description, contentCenterX, top - 372, bodyFont, 12.3, mutedGray, 420, 6);
+  drawWrappedCentered(page, description, contentCenterX, top - 330, bodyFont, 10.0, mutedGray, 470, 2);
 
   // Signature areas
-  const sigY = bottom + 54;
-  const leftSigX = left + 98;
-  const rightSigX = right - 98;
-  page.drawLine({ start: { x: leftSigX - 58, y: sigY }, end: { x: leftSigX + 58, y: sigY }, thickness: 1.1, color: deepMaroon });
-  page.drawLine({ start: { x: rightSigX - 58, y: sigY }, end: { x: rightSigX + 58, y: sigY }, thickness: 1.1, color: deepMaroon });
+  const sigLineY = bottom + 72;
+  const leftSigX = left + 118;
+  const rightSigX = right - 118;
+  page.drawText('Signature', {
+    x: leftSigX - script.widthOfTextAtSize('Signature', 16) / 2,
+    y: sigLineY + 22,
+    size: 16,
+    font: script,
+    color: softGray,
+  });
+  page.drawText('Signature', {
+    x: rightSigX - script.widthOfTextAtSize('Signature', 16) / 2,
+    y: sigLineY + 22,
+    size: 16,
+    font: script,
+    color: softGray,
+  });
+  page.drawLine({ start: { x: leftSigX - 64, y: sigLineY }, end: { x: leftSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
+  page.drawLine({ start: { x: rightSigX - 64, y: sigLineY }, end: { x: rightSigX + 64, y: sigLineY }, thickness: 1.1, color: deepMaroon });
 
   page.drawText(leftSignerName, {
-    x: leftSigX - bodyBold.widthOfTextAtSize(leftSignerName, 13) / 2,
-    y: sigY + 10,
-    size: 13,
+    x: leftSigX - bodyBold.widthOfTextAtSize(leftSignerName, 12) / 2,
+    y: sigLineY - 10,
+    size: 11,
     font: bodyBold,
     color: deepMaroon,
   });
   page.drawText(leftSignerRole, {
-    x: leftSigX - bodyFont.widthOfTextAtSize(leftSignerRole, 9) / 2,
-    y: sigY - 14,
-    size: 10,
+    x: leftSigX - bodyFont.widthOfTextAtSize(leftSignerRole, 8) / 2,
+    y: sigLineY - 24,
+    size: 9,
     font: bodyFont,
     color: softGray,
   });
 
-  const rightNameWidth = bodyBold.widthOfTextAtSize(rightSignerName, 13);
+  const rightNameWidth = bodyBold.widthOfTextAtSize(rightSignerName, 12);
   page.drawText(rightSignerName, {
     x: rightSigX - rightNameWidth / 2,
-    y: sigY + 10,
-    size: 13,
+    y: sigLineY - 10,
+    size: 11,
     font: bodyBold,
     color: deepMaroon,
   });
   page.drawText(rightSignerRole, {
-    x: rightSigX - bodyFont.widthOfTextAtSize(rightSignerRole, 9) / 2,
-    y: sigY - 14,
-    size: 10,
+    x: rightSigX - bodyFont.widthOfTextAtSize(rightSignerRole, 8) / 2,
+    y: sigLineY - 24,
+    size: 9,
     font: bodyFont,
     color: softGray,
   });
 
   page.drawCircle({
-    x: right - 84,
-    y: top - 58,
-    size: 23,
+    x: right - 74,
+    y: top - 50,
+    size: 32,
     color: rgb(0.63, 0.28, 0.11),
     borderColor: accentGold,
     borderWidth: 4,
   });
   page.drawText(sealText, {
-    x: right - 105,
-    y: top - 61,
-    size: 9.5,
+    x: right - 92,
+    y: top - 55,
+    size: 8,
     font: bodyBold,
     color: paper,
   });
@@ -301,8 +319,8 @@ async function renderPresetCertificate(pdf, payload) {
   if (issueDate) {
     page.drawText(issueDate, {
       x: pageW / 2 - 26,
-      y: bottom + 10,
-      size: 10.5,
+      y: bottom + 12,
+      size: 9.5,
       font: bodyFont,
       color: softGray,
     });
@@ -310,8 +328,8 @@ async function renderPresetCertificate(pdf, payload) {
 
   page.drawText(companyName, {
     x: left + 16,
-    y: bottom + 10,
-    size: 10,
+    y: bottom + 12,
+    size: 9.5,
     font: bodyBold,
     color: deepMaroon,
   });
