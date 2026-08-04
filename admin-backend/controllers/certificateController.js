@@ -211,17 +211,6 @@ async function renderPresetCertificate(pdf, payload) {
   });
   page.drawRectangle({ x: right - 58, y: top - 100, width: 24, height: 46, color: accentGold });
 
-  // Main card
-  page.drawRectangle({
-    x: left + 10,
-    y: bottom + 14,
-    width: pageW - (left + 10) - (pageW - right - 10),
-    height: pageH - (bottom + 14) - (pageH - top - 14),
-    color: paper,
-    borderColor: rgb(0.91, 0.88, 0.83),
-    borderWidth: 1,
-  });
-
   const contentCenterX = pageW / 2;
   drawCenteredText(page, title, top - 116, serif, 46, deepMaroon, pageW);
   drawCenteredText(page, subtitle, top - 150, bodyBold, 13, deepMaroon, pageW);
