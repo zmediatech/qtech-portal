@@ -136,6 +136,54 @@ function drawWrappedCentered(page, text, centerX, topY, font, size, color, maxWi
   return totalHeight;
 }
 
+function drawAwardBadge(page, centerX, centerY, outerColor, innerColor, textColor, text, font) {
+  const scallops = 12;
+  const outerRadius = 26;
+  const scallopRadius = 10;
+  for (let i = 0; i < scallops; i++) {
+    const angle = (Math.PI * 2 * i) / scallops;
+    page.drawCircle({
+      x: centerX + Math.cos(angle) * outerRadius,
+      y: centerY + Math.sin(angle) * outerRadius,
+      size: scallopRadius,
+      color: outerColor,
+      borderColor: innerColor,
+      borderWidth: 1,
+    });
+  }
+
+  page.drawCircle({
+    x: centerX,
+    y: centerY,
+    size: 28,
+    color: innerColor,
+    borderColor: outerColor,
+    borderWidth: 3,
+  });
+  page.drawCircle({
+    x: centerX,
+    y: centerY,
+    size: 18,
+    color: outerColor,
+    borderColor: innerColor,
+    borderWidth: 1,
+  });
+
+  const ribbonTop = centerY - 28;
+  page.drawRectangle({ x: centerX - 7, y: ribbonTop - 22, width: 14, height: 42, color: innerColor });
+  page.drawRectangle({ x: centerX - 21, y: ribbonTop - 14, width: 10, height: 34, color: rgb(0.82, 0.67, 0.34), rotate: degrees(0) });
+  page.drawRectangle({ x: centerX + 11, y: ribbonTop - 14, width: 10, height: 34, color: rgb(0.82, 0.67, 0.34), rotate: degrees(0) });
+
+  const labelWidth = font.widthOfTextAtSize(text, 8);
+  page.drawText(text, {
+    x: centerX - labelWidth / 2,
+    y: centerY - 3,
+    size: 8,
+    font,
+    color: textColor,
+  });
+}
+
 async function renderPresetCertificate(pdf, payload) {
   const {
     recipientName,
@@ -193,17 +241,7 @@ async function renderPresetCertificate(pdf, payload) {
   page.drawRectangle({ x: right - 88, y: bottom + 4, width: 9, height: 92, color: paper, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 68, y: bottom + 8, width: 10, height: 108, color: softGold, rotate: degrees(-32) });
   page.drawRectangle({ x: right - 84, y: bottom + 8, width: 6, height: 108, color: accentGold, rotate: degrees(-32) });
-  page.drawRectangle({ x: right - 92, y: top - 48, width: 58, height: 16, color: accentGold });
-  page.drawRectangle({ x: right - 73, y: top - 102, width: 28, height: 62, color: accentGold });
-  page.drawRectangle({ x: right - 83, y: top - 93, width: 12, height: 42, color: rgb(0.82, 0.67, 0.34) });
-  page.drawRectangle({ x: right - 61, y: top - 62, width: 36, height: 36, color: rgb(0.74, 0.33, 0.16), borderColor: accentGold, borderWidth: 3 });
-  page.drawText(sealText, {
-    x: right - 53,
-    y: top - 43,
-    size: 8,
-    font: bodyBold,
-    color: paper,
-  });
+  drawAwardBadge(page, right - 52, top - 48, deepMaroon, accentGold, paper, sealText, bodyBold);
 
   const contentCenterX = pageW / 2;
   drawCenteredText(page, title, top - 116, serif, 46, deepMaroon, pageW);
