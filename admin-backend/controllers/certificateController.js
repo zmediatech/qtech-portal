@@ -73,13 +73,240 @@ async function loadFont(pdf, family, style) {
   }
 }
 
+function drawCenteredText(page, text, y, font, size, color, pageW) {
+  const width = font.widthOfTextAtSize(text, size);
+  page.drawText(text, {
+    x: (pageW - width) / 2,
+    y,
+    size,
+    font,
+    color,
+  });
+}
+
+function wrapLines(text, maxChars) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+}
+
+async function renderPresetCertificate(pdf, payload) {
+  const {
+    recipientName,
+    title = 'Certificate',
+    subtitle = 'OF APPRECIATION',
+    bodyLine = 'THIS CERTIFICATE IS PROUDLY PRESENTED TO',
+    description = 'In recognition of dedication, effort, and achievement.',
+    academyName = 'Academy Name',
+    companyName = 'Company Name',
+    leftSignerName = 'Principal Name',
+    leftSignerRole = 'Principal',
+    rightSignerName = 'Director Name',
+    rightSignerRole = 'Director',
+    sealText = 'AWARD',
+    issueDate = '',
+  } = payload;
+
+  const page = pdf.addPage(A4_LANDSCAPE);
+  const { width: pageW, height: pageH } = page.getSize();
+
+  const cream = rgb(0.98, 0.93, 0.84);
+  const deepMaroon = rgb(0.55, 0.02, 0.06);
+  const accentGold = rgb(0.82, 0.67, 0.34);
+  const softGold = rgb(0.95, 0.86, 0.64);
+  const paper = rgb(1, 1, 1);
+  const softGray = rgb(0.43, 0.43, 0.43);
+
+  const serif = await loadFont(pdf, 'Times', 'bold');
+  const serifItalic = await loadFont(pdf, 'Times', 'italic');
+  const script = await loadFont(pdf, 'GreatVibes', 'normal');
+  const bodyFont = await loadFont(pdf, 'Helvetica', 'normal');
+  const bodyBold = await loadFont(pdf, 'Helvetica', 'bold');
+
+  // Background
+  page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: cream });
+  page.drawRectangle({ x: 24, y: 24, width: pageW - 48, height: pageH - 48, color: paper });
+
+  // Decorative maroon bands
+  page.drawRectangle({ x: 24, y: pageH - 84, width: pageW - 48, height: 36, color: deepMaroon });
+  page.drawRectangle({ x: 24, y: 24, width: pageW - 48, height: 28, color: deepMaroon });
+
+  // Gold accents, loosely matching the uploaded sample
+  page.drawRectangle({ x: 24, y: pageH - 220, width: 18, height: 136, color: accentGold });
+  page.drawRectangle({ x: 42, y: pageH - 220, width: 8, height: 136, color: softGold });
+  page.drawRectangle({ x: pageW - 42, y: 44, width: 8, height: 136, color: softGold });
+  page.drawRectangle({ x: pageW - 50, y: 44, width: 18, height: 136, color: accentGold });
+  page.drawRectangle({ x: pageW - 110, y: pageH - 165, width: 64, height: 22, color: accentGold });
+  page.drawCircle({
+    x: pageW - 96,
+    y: pageH - 106,
+    size: 42,
+    borderColor: accentGold,
+    borderWidth: 6,
+    color: rgb(0.85, 0.72, 0.41),
+  });
+  page.drawCircle({
+    x: pageW - 96,
+    y: pageH - 106,
+    size: 28,
+    borderColor: deepMaroon,
+    borderWidth: 1.5,
+    color: rgb(0.74, 0.33, 0.16),
+  });
+
+  // Main card
+  page.drawRectangle({
+    x: 58,
+    y: 72,
+    width: pageW - 116,
+    height: pageH - 144,
+    color: paper,
+    borderColor: rgb(0.91, 0.88, 0.83),
+    borderWidth: 1,
+  });
+
+  drawCenteredText(page, title, pageH - 184, serif, 54, deepMaroon, pageW);
+  drawCenteredText(page, subtitle, pageH - 224, bodyBold, 17, deepMaroon, pageW);
+  page.drawLine({
+    start: { x: pageW / 2 - 72, y: pageH - 232 },
+    end: { x: pageW / 2 + 72, y: pageH - 232 },
+    thickness: 1.4,
+    color: softGold,
+  });
+
+  drawCenteredText(page, academyName, pageH - 270, bodyBold, 18, softGray, pageW);
+  drawCenteredText(page, bodyLine, pageH - 328, bodyFont, 16, softGray, pageW);
+
+  const nameFont = script;
+  const nameSize = 40;
+  const nameWidth = nameFont.widthOfTextAtSize(recipientName, nameSize);
+  page.drawText(recipientName, {
+    x: (pageW - nameWidth) / 2,
+    y: pageH - 405,
+    size: nameSize,
+    font: nameFont,
+    color: deepMaroon,
+  });
+
+  const descriptionLines = wrapLines(description, 72);
+  const descStartY = pageH - 462;
+  descriptionLines.forEach((line, idx) => {
+    drawCenteredText(page, line, descStartY - idx * 22, bodyFont, 14.5, softGray, pageW);
+  });
+
+  // Signature areas
+  const sigY = 118;
+  page.drawLine({ start: { x: 158, y: sigY }, end: { x: 278, y: sigY }, thickness: 1.2, color: deepMaroon });
+  page.drawLine({ start: { x: pageW - 278, y: sigY }, end: { x: pageW - 158, y: sigY }, thickness: 1.2, color: deepMaroon });
+
+  page.drawText(leftSignerName, {
+    x: 160,
+    y: sigY + 12,
+    size: 15,
+    font: bodyBold,
+    color: deepMaroon,
+  });
+  page.drawText(leftSignerRole, {
+    x: 180,
+    y: sigY - 10,
+    size: 10,
+    font: bodyFont,
+    color: softGray,
+  });
+
+  const rightNameWidth = bodyBold.widthOfTextAtSize(rightSignerName, 15);
+  page.drawText(rightSignerName, {
+    x: pageW - 160 - rightNameWidth,
+    y: sigY + 12,
+    size: 15,
+    font: bodyBold,
+    color: deepMaroon,
+  });
+  page.drawText(rightSignerRole, {
+    x: pageW - 238,
+    y: sigY - 10,
+    size: 10,
+    font: bodyFont,
+    color: softGray,
+  });
+
+  page.drawText(sealText, {
+    x: pageW - 117,
+    y: pageH - 112,
+    size: 12,
+    font: bodyBold,
+    color: paper,
+  });
+
+  if (issueDate) {
+    page.drawText(issueDate, {
+      x: pageW / 2 - 32,
+      y: 88,
+      size: 10.5,
+      font: bodyFont,
+      color: softGray,
+    });
+  }
+
+  page.drawText(companyName, {
+    x: 64,
+    y: 88,
+    size: 10.5,
+    font: bodyBold,
+    color: deepMaroon,
+  });
+
+  return page;
+}
+
 exports.makeCertificate = async (req, res) => {
   try {
     const file = req.file;
-    if (!file) return res.status(400).json({ success: false, message: 'No image uploaded (field "image")' });
-
     const name = (req.body.name || '').toString().trim();
     if (!name) return res.status(400).json({ success: false, message: 'Student name is required' });
+
+    const mode = (req.body.mode || 'upload').toString();
+    const templateId = (req.body.templateId || 'classic-maroon-gold').toString();
+
+    if (mode === 'template' || !file) {
+      const pdf = await PDFDocument.create();
+      await renderPresetCertificate(pdf, {
+        recipientName: name,
+        title: (req.body.title || 'Certificate').toString(),
+        subtitle: (req.body.subtitle || 'OF APPRECIATION').toString(),
+        bodyLine: (req.body.bodyLine || 'THIS CERTIFICATE IS PROUDLY PRESENTED TO').toString(),
+        description: (req.body.description || 'In recognition of dedication, effort, and achievement.').toString(),
+        academyName: (req.body.academyName || 'Academy Name').toString(),
+        companyName: (req.body.companyName || 'Company Name').toString(),
+        leftSignerName: (req.body.leftSignerName || 'Principal Name').toString(),
+        leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
+        rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
+        rightSignerRole: (req.body.rightSignerRole || 'Director').toString(),
+        sealText: (req.body.sealText || 'AWARD').toString(),
+        issueDate: (req.body.issueDate || '').toString(),
+        templateId,
+      });
+
+      const bytes = await pdf.save();
+      const safe = name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="certificate-${safe}.pdf"`);
+      return res.send(Buffer.from(bytes));
+    }
 
     // ---- Positioning modes -------------------------------------------------
     // Mode A (simple): xPercent/yPercent anchor (0..100 of drawn image area)
