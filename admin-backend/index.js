@@ -50,7 +50,19 @@ const allowedOrigins = (process.env.CORS_ORIGIN ||
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+
+      const normalized = String(origin).trim().toLowerCase();
+      const explicitAllowlist = allowedOrigins.map((o) => o.toLowerCase());
+      const isAllowed =
+        explicitAllowlist.includes(normalized) ||
+        normalized.endsWith(".vercel.app") ||
+        normalized === "https://qtech-portal.vercel.app" ||
+        normalized === "https://qtech-backend.vercel.app";
+
+      return callback(isAllowed ? null : new Error(`CORS blocked for origin ${origin}`), isAllowed);
+    },
     credentials: true,
   })
 );
