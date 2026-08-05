@@ -279,12 +279,15 @@ async function addLecture(req, res) {
     if (!title) return res.status(400).json({ success: false, message: 'title is required' });
 
     const file = req.file;
+    const resourceUrl = file
+      ? `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+      : String(req.body.resourceUrl || '').trim();
     const lecture = await Lecture.create({
       course: course._id,
       title,
       description: String(req.body.description || '').trim(),
       order: Number(req.body.order || 1),
-      resourceUrl: file ? `/uploads/lectures/${file.filename}` : String(req.body.resourceUrl || '').trim(),
+      resourceUrl,
       fileName: file?.originalname || String(req.body.fileName || '').trim(),
       mimeType: file?.mimetype || String(req.body.mimeType || '').trim(),
       fileSize: file?.size || Number(req.body.fileSize || 0),
