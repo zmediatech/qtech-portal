@@ -64,8 +64,12 @@ app.use(
       return callback(isAllowed ? null : new Error(`CORS blocked for origin ${origin}`), isAllowed);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   })
 );
+
+app.options("*", cors());
 
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
