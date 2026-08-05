@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getApiBase } from "@/lib/session";
 
 type LoginSuccess = {
   message?: string;
@@ -26,11 +27,7 @@ function isLoginError(value: LoginResp): value is LoginError {
 export default function LoginPage() {
   const router = useRouter();
 
-  const API_BASE = (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://qtech-backend.vercel.app"
-  ).replace(/\/$/, "");
+  const API_BASE = getApiBase();
 
   const DASHBOARD_PATH =
     (process.env.NEXT_PUBLIC_DASHBOARD_PATH || "/dashboard").trim() ||

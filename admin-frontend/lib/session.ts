@@ -23,9 +23,5 @@ export function getStoredUser(): SessionUser | null {
 }
 
 export function getApiBase() {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://qtech-backend.vercel.app"
-  ).replace(/\/$/, "");
+  return "/api/backend";
 }

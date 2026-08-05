@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getApiBase } from "@/lib/session";
 
 type LoginResp = {
   message: string;
@@ -20,7 +21,7 @@ export default function LoginPage() {
     const fromStorage = localStorage.getItem("apiBase");
     setApiBase(
       (fromStorage && fromStorage.replace(/\/$/, "")) ||
-        (process.env.NEXT_PUBLIC_API_URL || "https://qtech-backend.vercel.app").replace(/\/$/, "")
+        getApiBase()
     );
   }, []);
   const loginUrl = useMemo(() => (apiBase ? `${apiBase}/api/auth/login` : ""), [apiBase]);
