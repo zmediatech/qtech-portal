@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { apiUrl, authHeaders } from "@/lib/api";
 import { getStoredUser, normalizeRole, SessionRole, SessionUser } from "@/lib/session";
-import { BookOpen, CalendarDays, Layers3, ShieldCheck, Users2 } from "lucide-react";
+import { BookOpen, CalendarDays, ClipboardList, DollarSign, Layers3, Receipt, ShieldCheck, Users2, GraduationCap } from "lucide-react";
 
 type Slot = {
   _id: string;
@@ -27,6 +27,17 @@ type Course = {
   description?: string;
   scopeType?: string;
   teacher?: { name?: string };
+};
+
+type OverviewStats = {
+  students: number;
+  teachers: number;
+  parents: number;
+  courses: number;
+  classes: number;
+  subjects: number;
+  feeRecords: number;
+  expenses: number;
 };
 
 function asArray<T>(payload: unknown): T[] {
@@ -51,7 +62,9 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [schedule, setSchedule] = useState<Slot[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [overviewLoading, setOverviewLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const normalizedRole = normalizeRole(role || user?.role);
@@ -59,6 +72,8 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
   const isTeacher = normalizedRole === "teacher";
   const isParent = normalizedRole === "parent";
   const isStudent = normalizedRole === "student";
+  const isSuperAdmin =
+    isAdmin && String(user?.email || "").toLowerCase() === "superadmin@gmail.com";
 
   useEffect(() => {
     setUser(getStoredUser());
@@ -95,6 +110,58 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
       alive = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+
+    let alive = true;
+    (async () => {
+      try {
+        setOverviewLoading(true);
+
+        const [usersRes, classesRes, subjectsRes, coursesRes, feeRes, expenseRes] = await Promise.all([
+          fetch(apiUrl("/api/users"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/classes"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/subjects"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/lms/courses"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/fee-records"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/expenses"), { headers: authHeaders(), cache: "no-store" }),
+        ]);
+
+        const [usersJson, classesJson, subjectsJson, coursesJson, feeJson, expenseJson] = await Promise.all([
+          usersRes.json(),
+          classesRes.json(),
+          subjectsRes.json(),
+          coursesRes.json(),
+          feeRes.json(),
+          expenseRes.json(),
+        ]);
+
+        if (!alive) return;
+
+        const users = asArray<SessionUser>(usersJson);
+        setOverview({
+          students: users.filter((item) => normalizeRole(item.role) === "student").length,
+          teachers: users.filter((item) => normalizeRole(item.role) === "teacher").length,
+          parents: users.filter((item) => normalizeRole(item.role) === "parent").length,
+          courses: asArray<Course>(coursesJson).length,
+          classes: asArray(classesJson).length,
+          subjects: asArray(subjectsJson).length,
+          feeRecords: asArray(feeJson).length,
+          expenses: asArray(expenseJson).length,
+        });
+      } catch {
+        if (!alive) return;
+        setOverview(null);
+      } finally {
+        if (alive) setOverviewLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [user, isAdmin]);
 
   const groupedSchedule = schedule.reduce((acc, slot) => {
     if (!acc[slot.day]) acc[slot.day] = [];
@@ -134,13 +201,27 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
         ? "Your class timetable"
         : "All timetable entries";
 
+  const quickLinks = [
+    { label: "Users & Roles", href: "/users" },
+    { label: "Students", href: "/students" },
+    { label: "Classes", href: "/classes" },
+    { label: "Subjects", href: "/subjects" },
+    { label: "Courses", href: "/courses" },
+    { label: "Timetable", href: "/schedule" },
+    { label: "Attendance", href: "/attendance" },
+    { label: "Exams", href: "/exams" },
+    { label: "Fees", href: "/admin/fees" },
+    { label: "Expenses", href: "/admin/expenses" },
+    { label: "Reports", href: "/reports" },
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 rounded-3xl border bg-gradient-to-br from-emerald-50 via-white to-cyan-50 p-4 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="rounded-full bg-emerald-600 px-3 py-1 text-white capitalize">{normalizedRole}</Badge>
+              <Badge className="rounded-full bg-emerald-600 px-3 py-1 text-white capitalize">{isSuperAdmin ? "superadmin" : normalizedRole}</Badge>
               <Badge variant="outline" className="rounded-full">{user?.email}</Badge>
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
@@ -154,11 +235,40 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
         </div>
 
         {isAdmin && (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">User Admin</CardTitle><ShieldCheck className="h-4 w-4 text-emerald-600" /></CardHeader><CardContent className="text-sm text-slate-600">Create teachers, students, and parents.</CardContent></Card>
-            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Schedules</CardTitle><CalendarDays className="h-4 w-4 text-sky-600" /></CardHeader><CardContent className="text-sm text-slate-600">Assign teachers to class schedules.</CardContent></Card>
-            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">LMS</CardTitle><BookOpen className="h-4 w-4 text-amber-600" /></CardHeader><CardContent className="text-sm text-slate-600">Manage courses and lecture content.</CardContent></Card>
-            <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Students</CardTitle><Users2 className="h-4 w-4 text-rose-600" /></CardHeader><CardContent className="text-sm text-slate-600">Monitor classes, progress, and assignments.</CardContent></Card>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
+                <p className="text-sm text-slate-600">
+                  {isSuperAdmin ? "Super admin control center for the whole portal." : "Admin control center for the whole portal."}
+                </p>
+              </div>
+              <Badge variant="secondary" className="rounded-full">
+                {overviewLoading ? "Refreshing stats..." : "Live stats"}
+              </Badge>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Students</CardTitle><Users2 className="h-4 w-4 text-rose-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.students ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Teachers</CardTitle><ShieldCheck className="h-4 w-4 text-emerald-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.teachers ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Parents</CardTitle><GraduationCap className="h-4 w-4 text-sky-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.parents ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Courses</CardTitle><BookOpen className="h-4 w-4 text-amber-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.courses ?? courses.length}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Classes</CardTitle><ClipboardList className="h-4 w-4 text-violet-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.classes ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Subjects</CardTitle><Layers3 className="h-4 w-4 text-cyan-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.subjects ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Fee Records</CardTitle><DollarSign className="h-4 w-4 text-emerald-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.feeRecords ?? "0"}</CardContent></Card>
+              <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Expenses</CardTitle><Receipt className="h-4 w-4 text-rose-600" /></CardHeader><CardContent className="text-2xl font-bold">{overview?.expenses ?? "0"}</CardContent></Card>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {quickLinks.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <Card className="h-full transition hover:border-emerald-300 hover:bg-emerald-50/60">
+                    <CardContent className="flex h-full items-center justify-between py-4">
+                      <span className="font-medium text-slate-900">{item.label}</span>
+                      <span className="text-sm text-slate-500">Open</span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
