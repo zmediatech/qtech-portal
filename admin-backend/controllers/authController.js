@@ -42,7 +42,10 @@ const signup = async (req, res) => {
     });
   } catch (error) {
     console.error("Error during signup:", error);
-    res.status(500).json({ error: "Internal server error", success: false });
+    res.status(500).json({
+      error: error.message || "Internal server error",
+      success: false,
+    });
   }
 };
 
@@ -86,7 +89,10 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Error during login:", error);
-    res.status(500).json({ error: "Internal server error", success: false });
+    res.status(500).json({
+      error: error.message || "Internal server error",
+      success: false,
+    });
   }
 };
 
@@ -109,7 +115,10 @@ const me = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching profile:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
@@ -144,7 +153,10 @@ const updateSignatures = async (req, res) => {
     });
   } catch (error) {
     console.error("Error saving signatures:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
