@@ -28,7 +28,12 @@ const createUser = async (req, res) => {
     const body = req.body || {};
     const name = body.name;
     const password = body.password;
+    const role = String(body.role || "student").toLowerCase();
     const email = String(body.email || "").toLowerCase().trim();
+    const studentClass = body.studentClass || null;
+    const parentStudentIds = Array.isArray(body.parentStudentIds) ? body.parentStudentIds : [];
+    const assignedClasses = Array.isArray(body.assignedClasses) ? body.assignedClasses : [];
+    const assignedSubjects = Array.isArray(body.assignedSubjects) ? body.assignedSubjects : [];
 
     await connectDB(process.env.MONGODB_URI);
 
@@ -39,7 +44,16 @@ const createUser = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, message: 'User already exists with this email' });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await UserModel.create({ name, email, password: hashed });
+    const user = await UserModel.create({
+      name,
+      email,
+      password: hashed,
+      role,
+      studentClass,
+      parentStudentIds,
+      assignedClasses,
+      assignedSubjects,
+    });
 
     const out = user.toObject();
     delete out.password;
@@ -52,7 +66,7 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, role, studentClass, parentStudentIds, assignedClasses, assignedSubjects } = req.body;
     const userId = req.params.id;
 
     const user = await UserModel.findById(userId);
@@ -65,7 +79,15 @@ const updateUser = async (req, res) => {
 
     const updated = await UserModel.findByIdAndUpdate(
       userId,
-      { name, email },
+      {
+        name,
+        email,
+        role,
+        studentClass,
+        parentStudentIds,
+        assignedClasses,
+        assignedSubjects,
+      },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -142,7 +164,7 @@ const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id, role: user.role, email: user.email },
       process.env.JWT_SECRET || 'secret-123',
       { expiresIn: '24h' }
     );
@@ -154,7 +176,12 @@ const loginUser = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
+        studentClass: user.studentClass || null,
+        parentStudentIds: user.parentStudentIds || [],
+        assignedClasses: user.assignedClasses || [],
+        assignedSubjects: user.assignedSubjects || [],
       }
     });
   } catch (error) {
@@ -172,6 +199,10 @@ const changePassword = async (req, res) => {
     await connectDB(process.env.MONGODB_URI);
     const { currentPassword, newPassword } = req.body;
     const userId = req.params.id;
+    const requesterId = req.user?.id || req.user?._id;
+    if (String(requesterId) !== String(userId) && req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You can only change your own password' });
+    }
 
     if (!currentPassword || !newPassword)
       return res.status(400).json({ success: false, message: 'Please provide current password and new password' });

@@ -1,5 +1,7 @@
 const TimetableSlot = require('../models/TimetableSlot');
 const mongoose = require('mongoose');
+const User = require('../models/User');
+const Student = require('../models/Student');
 
 const TIME_24H_RE = /^\d{2}:\d{2}$/;
 
@@ -114,6 +116,44 @@ async function getAllTimetableSlots(req, res) {
   }
 }
 
+async function getMySchedule(req, res) {
+  try {
+    const user = await User.findById(req.user.id).lean();
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const filter = {};
+    if (user.role === 'teacher') {
+      const classIds = user.assignedClasses || [];
+      const subjectIds = user.assignedSubjects || [];
+      if (classIds.length) filter.class = { $in: classIds };
+      if (subjectIds.length) filter.subject = { $in: subjectIds };
+    } else if (user.role === 'student') {
+      if (user.studentClass) filter.class = user.studentClass;
+    } else if (user.role === 'parent') {
+      const children = await Student.find({ _id: { $in: user.parentStudentIds || [] } }).select('class').lean();
+      const classIds = children.map((child) => child.class).filter(Boolean);
+      if (classIds.length) filter.class = { $in: classIds };
+    }
+
+    const list = await TimetableSlot.find(filter)
+      .sort({ day: 1, startTime: 1 })
+      .populate('class', 'name description')
+      .populate('subject', 'name code')
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        role: user.role,
+        name: user.name,
+        slots: list,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+}
+
 /** Get one */
 async function getTimetableSlotById(req, res) {
   try {
@@ -220,4 +260,5 @@ module.exports = {
   getTimetableSlotById,
   updateTimetableSlot,
   deleteTimetableSlot,
+  getMySchedule,
 };

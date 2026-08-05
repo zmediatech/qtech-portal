@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "./theme-toggle"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { getStoredUser } from "@/lib/session"
+import { useEffect, useState } from "react"
 
 interface AdminHeaderProps {
   onMenuClick: () => void
@@ -13,9 +16,17 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter()
+  const [name, setName] = useState("")
+  const [role, setRole] = useState("")
 
   // Public login route after logout
   const LOGIN_PATH = (process.env.NEXT_PUBLIC_LOGIN_PATH || "/login").trim() || "/login"
+
+  useEffect(() => {
+    const user = getStoredUser()
+    setName(user?.name || "")
+    setRole(user?.role || "")
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -77,6 +88,11 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             />
           </div>
         </form>
+      </div>
+
+      <div className="hidden items-center gap-2 lg:flex">
+        {name && <span className="text-sm font-medium text-slate-700">{name}</span>}
+        {role && <Badge variant="secondary" className="capitalize">{role}</Badge>}
       </div>
 
       {/* Dark-mode toggle */}

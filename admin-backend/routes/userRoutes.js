@@ -9,23 +9,25 @@ const {
     loginUser,
     changePassword
 } = require('../controllers/userController');
+const requireAuth = require('../middleware/requireAuth');
+const requireRole = require('../middleware/requireRole');
 
 const router = express.Router();
 
 // @route   GET /api/users
 // @desc    Get all users
 // @access  Public
-router.get('/', getAllUsers);
+router.get('/', requireAuth, requireRole('admin'), getAllUsers);
 
 // @route   GET /api/users/:id
 // @desc    Get user by ID
 // @access  Public
-router.get('/:id', getUserById);
+router.get('/:id', requireAuth, requireRole('admin'), getUserById);
 
 // @route   POST /api/users/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', createUser);
+router.post('/register', requireAuth, requireRole('admin'), createUser);
 
 // @route   POST /api/users/login
 // @desc    Login user
@@ -35,16 +37,16 @@ router.post('/login', loginUser);
 // @route   PUT /api/users/:id
 // @desc    Update user
 // @access  Private
-router.put('/:id', updateUser);
+router.put('/:id', requireAuth, requireRole('admin'), updateUser);
 
 // @route   DELETE /api/users/:id
 // @desc    Delete user
 // @access  Private
-router.delete('/:id', deleteUser);
+router.delete('/:id', requireAuth, requireRole('admin'), deleteUser);
 
 // @route   PUT /api/users/:id/change-password
 // @desc    Change user password
 // @access  Private
-router.put('/:id/change-password', changePassword);
+router.put('/:id/change-password', requireAuth, changePassword);
 
 module.exports = router;

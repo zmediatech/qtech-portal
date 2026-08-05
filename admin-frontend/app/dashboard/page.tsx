@@ -1,258 +1,362 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/admin-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DashboardFilters } from "@/components/dashboard-filters";
-import { StudentCategoriesChart, IncomeExpenseChart } from "@/components/dashboard-charts";
-import {
-  Users,
-  DollarSign,
-  UserCheck,
-  UserX,
-  CreditCard,
-  Receipt,
-  AlertCircle,
-  Download,
-} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { apiUrl, authHeaders } from "@/lib/api";
+import { getStoredUser, SessionUser } from "@/lib/session";
+import { BookOpen, CalendarDays, GraduationCap, Layers3, ShieldCheck, Users2 } from "lucide-react";
 
-// ---------- types ----------
-type Student = {
-  status?: string;
-  feeStatus?: string;
+type Slot = {
+  _id: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+  class?: { _id?: string; name?: string };
+  subject?: { _id?: string; name?: string; code?: string };
+  instructorName?: string;
 };
 
-type FeeRecord = {
-  amount?: number;
-  status?: string;
+type Course = {
+  _id: string;
+  title: string;
+  description?: string;
+  scopeType?: string;
+  teacher?: { name?: string; email?: string; role?: string };
+  classIds?: Array<{ _id?: string; name?: string }>;
+  subjectIds?: Array<{ _id?: string; name?: string; code?: string }>;
+  lectures?: Array<{ _id?: string }>;
 };
 
-type Expense = {
-  amount?: number;
+type Enrollment = {
+  _id: string;
+  course?: Course;
 };
 
-// ---------- helpers ----------
-function asArray(json: any): any[] {
-  if (Array.isArray(json)) return json;
-  if (json && Array.isArray(json.data)) return json.data;
-  if (json && Array.isArray(json.results)) return json.results;
-  if (json && Array.isArray(json.items)) return json.items;
+type Overview = {
+  students?: number;
+  users?: number;
+  fees?: number;
+  expenses?: number;
+};
+
+const DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function asArray<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object" && Array.isArray((payload as any).data)) return (payload as any).data;
+  if (payload && typeof payload === "object" && Array.isArray((payload as any).items)) return (payload as any).items;
   return [];
 }
 
-function money(n: number) {
-  return `Rs ${(n ?? 0).toLocaleString("en-PK")}`;
-}
-
-// ----- CSV helpers -----
-function csvEscape(val: unknown): string {
-  const s = val == null ? "" : String(val);
-  const needsWrap = /[",\n\r]/.test(s);
-  const escaped = s.replace(/"/g, '""');
-  return needsWrap ? `"${escaped}"` : escaped;
-}
-
-function rowsToCsv(rows: Record<string, unknown>[], header?: string[]): string {
-  const cols = header?.length ? header : rows.length ? Object.keys(rows[0]) : [];
-  const head = cols.join(",");
-  const body = rows.map(r => cols.map(c => csvEscape(r[c])).join(",")).join("\r\n");
-  return head + (body ? "\r\n" + body : "");
-}
-
-function saveBlob(blob: Blob, filename: string, csvTextForFallback?: string) {
-  // Old Edge
-  // @ts-ignore
-  if (navigator.msSaveBlob) {
-    // @ts-ignore
-    navigator.msSaveBlob(blob, filename);
-    return;
+function pickLabel(value: unknown): string {
+  if (!value) return "All";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const item = value as { name?: string; code?: string };
+    return item.code ? `${item.name || "Unnamed"} (${item.code})` : item.name || "Unnamed";
   }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-
-  a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    if (a.parentNode) document.body.removeChild(a);
-    if (csvTextForFallback) {
-      const dataUrl = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csvTextForFallback);
-      window.open(dataUrl, "_blank", "noopener,noreferrer");
-    }
-  }, 0);
-}
-
-function downloadCsv(rows: Record<string, unknown>[], filename: string, header?: string[]) {
-  const csv = rowsToCsv(rows, header);
-  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
-  saveBlob(blob, filename, csv);
+  return "All";
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [fees, setFees] = useState<FeeRecord[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<Slot[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [overview, setOverview] = useState<Overview>({});
+  const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = useMemo(
-    () =>
-      (process.env.NEXT_PUBLIC_API_BASE_URL ||
-        process.env.NEXT_PUBLIC_API_URL ||
-        "https://qtech-backend.vercel.app"
-      ).replace(/\/$/, ""),
-    []
-  );
+  const role = user?.role || "student";
 
-  // ---------- auth gate ----------
+  const roleLabel = useMemo(() => {
+    if (!role) return "Portal";
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  }, [role]);
+
   useEffect(() => {
-    try {
-      const token = localStorage.getItem("token");
-      const user = localStorage.getItem("user");
-      if (!token || !user) {
-        router.replace("/login");
-        setIsAuthenticated(false);
-        return;
-      }
-      JSON.parse(user);
-      setIsAuthenticated(true);
-    } catch {
-      localStorage.clear();
-      setIsAuthenticated(false);
+    const stored = getStoredUser();
+    if (!stored) {
       router.replace("/login");
+      return;
     }
+    setUser(stored);
   }, [router]);
 
-  // ---------- load dashboard data ----------
   useEffect(() => {
-    if (isAuthenticated !== true) return;
+    if (!user) return;
 
     let alive = true;
+
     (async () => {
       try {
         setLoading(true);
-        setLoadError(null);
+        setError(null);
 
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        const headers: HeadersInit = token
-          ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
-          : { "Content-Type": "application/json" };
-
-        const [sRes, fRes, eRes] = await Promise.all([
-          fetch(`${API_BASE}/api/students`, { headers }),
-          fetch(`${API_BASE}/api/fee-records`, { headers }),
-          fetch(`${API_BASE}/api/expenses`, { headers }),
+        const [scheduleRes, coursesRes, enrollRes, studentsRes, usersRes, feesRes, expensesRes] = await Promise.all([
+          fetch(apiUrl("/api/timetable-slots/me"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/lms/courses"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/lms/enrollments/me"), { headers: authHeaders(), cache: "no-store" }),
+          role === "admin" ? fetch(apiUrl("/api/students"), { headers: authHeaders(), cache: "no-store" }) : Promise.resolve(null),
+          role === "admin" ? fetch(apiUrl("/api/users"), { headers: authHeaders(), cache: "no-store" }) : Promise.resolve(null),
+          role === "admin" ? fetch(apiUrl("/api/fee-records"), { headers: authHeaders(), cache: "no-store" }) : Promise.resolve(null),
+          role === "admin" ? fetch(apiUrl("/api/expenses"), { headers: authHeaders(), cache: "no-store" }) : Promise.resolve(null),
         ]);
 
-        const [sJson, fJson, eJson] = await Promise.all([sRes.json(), fRes.json(), eRes.json()]);
+        const [scheduleJson, coursesJson, enrollJson, studentsJson, usersJson, feesJson, expensesJson] = await Promise.all([
+          scheduleRes.json(),
+          coursesRes.json(),
+          enrollRes.json(),
+          studentsRes ? studentsRes.json() : Promise.resolve(null),
+          usersRes ? usersRes.json() : Promise.resolve(null),
+          feesRes ? feesRes.json() : Promise.resolve(null),
+          expensesRes ? expensesRes.json() : Promise.resolve(null),
+        ]);
+
         if (!alive) return;
 
-        setStudents(asArray(sJson) as Student[]);
-        setFees(asArray(fJson) as FeeRecord[]);
-        setExpenses(asArray(eJson) as Expense[]);
+        setSchedule(asArray<Slot>(scheduleJson));
+        setCourses(asArray<Course>(coursesJson));
+        setEnrollments(asArray<Enrollment>(enrollJson));
+
+        if (role === "admin") {
+          const students = asArray<any>(studentsJson);
+          const users = asArray<any>(usersJson);
+          const fees = asArray<any>(feesJson);
+          const expenses = asArray<any>(expensesJson);
+          setOverview({
+            students: students.length,
+            users: users.length,
+            fees: fees.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+            expenses: expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+          });
+        }
       } catch (err: any) {
         if (!alive) return;
-        setLoadError(err?.message || "Failed to load dashboard data");
+        setError(err?.message || "Unable to load dashboard");
       } finally {
         if (alive) setLoading(false);
       }
     })();
 
-    return () => { alive = false; };
-  }, [API_BASE, isAuthenticated]);
+    return () => {
+      alive = false;
+    };
+  }, [user, role]);
 
-  // ---------- derived ----------
-  const totalStudents = students.length;
-  const activeStudents = students.filter((s) => s.status === "Active").length;
-  const inactiveStudents = students.filter((s) => s.status === "Inactive").length;
-  const paidStudents = students.filter((s) => s.feeStatus === "Paid").length;
-  const unpaidStudents = students.filter((s) => s.feeStatus && s.feeStatus !== "Paid").length;
-  const collectedFees = fees.reduce((sum, r) => (r.status === "Paid" ? sum + (Number(r.amount) || 0) : sum), 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const groupedSchedule = schedule.reduce((acc, slot) => {
+    if (!acc[slot.day]) acc[slot.day] = [];
+    acc[slot.day].push(slot);
+    return acc;
+  }, {} as Record<string, Slot[]>);
 
-  // ---------- Summary CSV ----------
-  const exportSummary = () => {
-    const rows = [
-      { metric: "Total Students", value: totalStudents },
-      { metric: "Active Students", value: activeStudents },
-      { metric: "Inactive Students", value: inactiveStudents },
-      { metric: "Paid Students", value: paidStudents },
-      { metric: "Unpaid Students", value: unpaidStudents },
-      { metric: "Collected Fees (PKR)", value: collectedFees },
-      { metric: "Total Expenses (PKR)", value: totalExpenses },
-    ];
-    downloadCsv(rows as any[], "dashboard-summary.csv", ["metric", "value"]);
-  };
-
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+  for (const day of Object.keys(groupedSchedule)) {
+    groupedSchedule[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
-  if (!isAuthenticated) return null;
+
+  const assignedClasses = (user?.assignedClasses || []).map(pickLabel);
+  const assignedSubjects = (user?.assignedSubjects || []).map(pickLabel);
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={exportSummary}
-          disabled={loading || !!loadError}
-          title="Export KPI summary"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Summary CSV
-        </Button>
-      </div>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 rounded-3xl border bg-gradient-to-br from-emerald-50 via-white to-cyan-50 p-4 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full bg-emerald-600 px-3 py-1 text-white">{roleLabel}</Badge>
+              <Badge variant="outline" className="rounded-full">
+                {user?.email}
+              </Badge>
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+              Welcome, {user?.name || "User"}
+            </h1>
+            <p className="max-w-2xl text-sm text-slate-600 sm:text-base">
+              This view adapts to your account. Teachers see assigned classes and courses, students see enrolled learning paths, and admins see the full school overview.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/schedule"><Button variant="outline" className="rounded-full">My Schedule</Button></Link>
+            <Link href="/courses"><Button className="rounded-full">LMS</Button></Link>
+            {role === "admin" && (
+              <Link href="/users"><Button variant="secondary" className="rounded-full">Manage Users</Button></Link>
+            )}
+          </div>
+        </div>
 
-      <DashboardFilters />
-
-      {/* KPI Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {loading ? (
-          Array.from({ length: 7 }).map((_, i) => <Card key={i} className="h-[110px] animate-pulse" />)
-        ) : loadError ? (
-          <Card className="sm:col-span-2 lg:col-span-4">
-            <CardHeader><CardTitle>Dashboard</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-red-600">Error: {loadError}</p></CardContent>
-          </Card>
-        ) : (
-          <>
-            <Link href="/students"><Card><CardHeader><CardTitle>Total Students</CardTitle></CardHeader><CardContent><div>{totalStudents}</div></CardContent></Card></Link>
-            <Link href="/students/categories/active"><Card><CardHeader><CardTitle>Active Students</CardTitle></CardHeader><CardContent><div>{activeStudents}</div></CardContent></Card></Link>
-            <Link href="/students/categories/inactive"><Card><CardHeader><CardTitle>Inactive Students</CardTitle></CardHeader><CardContent><div>{inactiveStudents}</div></CardContent></Card></Link>
-            <Link href="/students/categories/paid"><Card><CardHeader><CardTitle>Paid Students</CardTitle></CardHeader><CardContent><div>{paidStudents}</div></CardContent></Card></Link>
-            <Link href="/students/categories/unpaid"><Card><CardHeader><CardTitle>Unpaid Students</CardTitle></CardHeader><CardContent><div>{unpaidStudents}</div></CardContent></Card></Link>
-            <Link href="/admin/fees"><Card><CardHeader><CardTitle>Collected Fees</CardTitle></CardHeader><CardContent><div>{money(collectedFees)}</div></CardContent></Card></Link>
-            <Link href="/admin/expenses"><Card><CardHeader><CardTitle>Total Expenses</CardTitle></CardHeader><CardContent><div>{money(totalExpenses)}</div></CardContent></Card></Link>
-          </>
+        {role === "admin" && (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Students</CardTitle>
+                <Users2 className="h-4 w-4 text-emerald-600" />
+              </CardHeader>
+              <CardContent className="text-2xl font-semibold">{overview.students ?? 0}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Users</CardTitle>
+                <ShieldCheck className="h-4 w-4 text-sky-600" />
+              </CardHeader>
+              <CardContent className="text-2xl font-semibold">{overview.users ?? 0}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Collected Fees</CardTitle>
+                <Layers3 className="h-4 w-4 text-amber-600" />
+              </CardHeader>
+              <CardContent className="text-2xl font-semibold">Rs {(overview.fees ?? 0).toLocaleString("en-PK")}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expenses</CardTitle>
+                <GraduationCap className="h-4 w-4 text-rose-600" />
+              </CardHeader>
+              <CardContent className="text-2xl font-semibold">Rs {(overview.expenses ?? 0).toLocaleString("en-PK")}</CardContent>
+            </Card>
+          </div>
         )}
-      </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <IncomeExpenseChart />
-        <StudentCategoriesChart />
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+          <Card className="min-w-0">
+            <CardHeader className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-emerald-600" />
+                Schedule
+              </CardTitle>
+              <CardDescription>
+                {role === "teacher"
+                  ? "Classes assigned to you"
+                  : role === "student"
+                    ? "Your class timetable"
+                    : role === "parent"
+                      ? "Your child's timetable"
+                      : "All timetable entries"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+                  ))}
+                </div>
+              ) : error ? (
+                <p className="text-sm text-red-600">{error}</p>
+              ) : schedule.length === 0 ? (
+                <p className="text-sm text-slate-500">No schedule found for this account.</p>
+              ) : (
+                <div className="space-y-4">
+                  {DAYS_ORDER.filter((day) => groupedSchedule[day]?.length).map((day) => (
+                    <div key={day} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{day}</h3>
+                        <Badge variant="outline">{groupedSchedule[day].length} slots</Badge>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {groupedSchedule[day].map((slot) => (
+                          <div key={slot._id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {slot.startTime} - {slot.endTime}
+                                </div>
+                                <div className="mt-1 text-sm text-slate-600">
+                                  {slot.class?.name || "Class"} · {slot.subject?.code ? `${slot.subject.code} - ` : ""}{slot.subject?.name || "Subject"}
+                                </div>
+                              </div>
+                              <Badge variant="secondary">{slot.instructorName || "TBA"}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-sky-600" />
+                  LMS Snapshot
+                </CardTitle>
+                <CardDescription>
+                  {role === "teacher"
+                    ? "Courses you can manage"
+                    : role === "student"
+                      ? "Courses you can enroll in"
+                      : role === "parent"
+                        ? "Courses linked to your child"
+                        : "All available courses"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Courses</span>
+                  <span className="font-medium">{courses.length}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">My enrollments</span>
+                  <span className="font-medium">{enrollments.length}</span>
+                </div>
+                <Separator />
+                <div className="space-y-2 text-sm text-slate-600">
+                  {role === "teacher" ? (
+                    <>
+                      <p><span className="font-medium text-slate-900">Classes:</span> {assignedClasses.length ? assignedClasses.join(", ") : "None assigned yet"}</p>
+                      <p><span className="font-medium text-slate-900">Subjects:</span> {assignedSubjects.length ? assignedSubjects.join(", ") : "None assigned yet"}</p>
+                    </>
+                  ) : role === "admin" ? (
+                    <p>You can create courses, attach lectures, and assign teachers to classes and subjects.</p>
+                  ) : (
+                    <p>Open the LMS page to browse classwise and subjectwise courses and enroll.</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href="/courses"><Button className="rounded-full">Open LMS</Button></Link>
+                  {role === "teacher" && <Link href="/courses"><Button variant="outline" className="rounded-full">Create Course</Button></Link>}
+                </div>
+              </CardContent>
+            </Card>
+
+            {(role === "teacher" || role === "student" || role === "parent") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers3 className="h-5 w-5 text-emerald-600" />
+                    Assignments
+                  </CardTitle>
+                  <CardDescription>Class and subject mapping tied to your login</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <div className="mb-1 font-medium text-slate-900">Classes</div>
+                    <div className="flex flex-wrap gap-2">
+                      {assignedClasses.length ? assignedClasses.map((label) => <Badge key={label} variant="outline">{label}</Badge>) : <span className="text-slate-500">None</span>}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 font-medium text-slate-900">Subjects</div>
+                    <div className="flex flex-wrap gap-2">
+                      {assignedSubjects.length ? assignedSubjects.map((label) => <Badge key={label} variant="outline">{label}</Badge>) : <span className="text-slate-500">None</span>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

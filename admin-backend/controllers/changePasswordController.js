@@ -5,11 +5,15 @@ const User = require("../models/User");
 
 async function changePassword(req, res) {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const requesterId = req.user?.id || req.user?._id;
+    const userId = req.params.id || requesterId;
     const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
     if (!userId || !mongoose.isValidObjectId(userId)) {
       return res.status(400).json({ success: false, message: "Invalid user" });
+    }
+    if (String(requesterId) !== String(userId) && req.user?.role !== "admin") {
+      return res.status(403).json({ success: false, message: "You can only change your own password" });
     }
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       return res

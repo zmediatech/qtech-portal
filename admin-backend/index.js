@@ -18,6 +18,9 @@ require("./models/Expense");
 require("./models/Mark");
 require("./models/User");
 require("./models/Certificate");
+require("./models/Course");
+require("./models/Lecture");
+require("./models/Enrollment");
 
 // --- Routers
 const subjectRoutes = require("./routes/subjectRoutes");
@@ -33,6 +36,7 @@ const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
+const lmsRoutes = require("./routes/lmsRoutes");
 
 const app = express();
 
@@ -92,6 +96,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/certificates", certificateRoutes);
+app.use("/api/lms", lmsRoutes);
+app.use("/uploads", express.static(require("path").join(__dirname, "uploads")));
 
 /* ------------------ 404 ------------------ */
 app.use((req, res) => {

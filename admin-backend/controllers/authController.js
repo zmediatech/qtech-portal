@@ -9,7 +9,12 @@ const signup = async (req, res) => {
     const body = req.body || {};
     const name = body.name;
     const password = body.password;
+    const role = String(body.role || "student").toLowerCase();
     const email = String(body.email || "").toLowerCase().trim();
+    const studentClass = body.studentClass || null;
+    const parentStudentIds = Array.isArray(body.parentStudentIds) ? body.parentStudentIds : [];
+    const assignedClasses = Array.isArray(body.assignedClasses) ? body.assignedClasses : [];
+    const assignedSubjects = Array.isArray(body.assignedSubjects) ? body.assignedSubjects : [];
 
     await connectDB(process.env.MONGODB_URI);
 
@@ -19,7 +24,16 @@ const signup = async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await UserModel.create({ name, email, password: hashed });
+    const user = await UserModel.create({
+      name,
+      email,
+      password: hashed,
+      role,
+      studentClass,
+      parentStudentIds,
+      assignedClasses,
+      assignedSubjects,
+    });
 
     res.status(201).json({
       message: "User created successfully",
@@ -48,7 +62,7 @@ const login = async (req, res) => {
     if (!ok) return res.status(403).json({ message: errorMsg, success: false });
 
     const token = jwt.sign(
-      { email: user.email, _id: user._id },
+      { email: user.email, _id: user._id, role: user.role },
       process.env.JWT_SECRET || "secret-123",
       { expiresIn: "24h" }
     );
@@ -61,6 +75,11 @@ const login = async (req, res) => {
         email: user.email,
         name: user.name,
         id: user._id,
+        role: user.role,
+        studentClass: user.studentClass || null,
+        parentStudentIds: user.parentStudentIds || [],
+        assignedClasses: user.assignedClasses || [],
+        assignedSubjects: user.assignedSubjects || [],
         leftSignatureDataUrl: user.leftSignatureDataUrl || "",
         rightSignatureDataUrl: user.rightSignatureDataUrl || "",
       },

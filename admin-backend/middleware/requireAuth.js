@@ -8,7 +8,11 @@ function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ success: false, message: 'No token provided.' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret-123');
-    req.user = { id: decoded.id || decoded.userId || decoded._id };
+    req.user = {
+      id: decoded.id || decoded.userId || decoded._id,
+      role: decoded.role,
+      email: decoded.email,
+    };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
