@@ -231,33 +231,42 @@ export function FeePaymentForm({ onSuccess, preset }: FeePaymentFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md" style={{ height: '90vh' }}>
-        
-        {/* Header - Fixed */}
-        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-center text-gray-800">Fee Payment Form</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-2 py-2 backdrop-blur-md sm:px-4 sm:py-4">
+      <div className="flex w-full max-w-[42rem] flex-col overflow-hidden rounded-[1.5rem] border border-white/10 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)] max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)]">
+        <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-800 px-4 py-4 text-white sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[0.7rem] font-medium uppercase tracking-[0.24em] text-emerald-200">Fee Management</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">Record Fee Payment</h2>
+            </div>
+            <Badge className="rounded-full bg-white/10 px-3 py-1 text-white hover:bg-white/10">Professional Form</Badge>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm text-slate-200">
+            Search an existing student, review the linked class, and record a payment without manual duplication.
+          </p>
         </div>
 
-        {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ height: 'calc(90vh - 80px)' }}>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/60 px-3 py-4 sm:px-5 sm:py-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
 
             {/* Student Search */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Find Student</Label>
-              <div className="flex items-center gap-2 rounded-md border bg-white px-3">
-                <Search className="h-4 w-4 text-muted-foreground" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <Label className="text-sm font-semibold text-slate-800">Find Student</Label>
+                <Badge variant="outline" className="rounded-full">Search first</Badge>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
+                <Search className="h-4 w-4 text-slate-400" />
                 <Input
                   value={studentQuery}
                   onChange={(e) => setStudentQuery(e.target.value)}
                   placeholder={loadingStudents ? "Loading students..." : "Search by name, reg no, or class"}
-                  className="border-0 px-0 shadow-none focus-visible:ring-0"
+                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
-              <div className="max-h-52 overflow-auto rounded-md border bg-white">
+              <div className="mt-3 max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white">
                 {filteredStudents.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground">
+                  <div className="p-4 text-sm text-slate-500">
                     {loadingStudents ? "Loading students..." : "No matching students found"}
                   </div>
                 ) : (
@@ -269,16 +278,16 @@ export function FeePaymentForm({ onSuccess, preset }: FeePaymentFormProps) {
                         key={student._id}
                         type="button"
                         onClick={() => selectStudent(student)}
-                        className={`flex w-full items-center justify-between gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 ${
-                          isSelected ? "bg-emerald-50" : "hover:bg-muted/50"
+                        className={`flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 text-left text-sm last:border-b-0 ${
+                          isSelected ? "bg-emerald-50" : "hover:bg-slate-50"
                         }`}
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900">{student.name || "Unnamed Student"}</span>
+                            <span className="truncate font-medium text-slate-900">{student.name || "Unnamed Student"}</span>
                             {isSelected && <Check className="h-4 w-4 text-emerald-600" />}
                           </div>
-                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                             <span>{student.regNo || "No reg no"}</span>
                             {classLabel && <span>{classLabel}</span>}
                           </div>
@@ -294,145 +303,138 @@ export function FeePaymentForm({ onSuccess, preset }: FeePaymentFormProps) {
             </div>
 
             {selectedStudent && (
-              <div className="rounded-md border bg-emerald-50 p-3 text-sm">
-                <div className="flex items-center gap-2 font-medium text-emerald-900">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm shadow-sm">
+                <div className="flex items-center gap-2 font-semibold text-emerald-900">
                   <UserRound className="h-4 w-4" />
                   Selected Student
                 </div>
-                <div className="mt-2 grid gap-1 text-emerald-950">
-                  <span><strong>Name:</strong> {selectedStudent.name}</span>
-                  <span><strong>Reg No:</strong> {selectedStudent.regNo}</span>
-                  <span><strong>Class:</strong> {form.className || "N/A"}</span>
+                <div className="mt-3 grid gap-2 text-emerald-950 sm:grid-cols-3">
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <div className="text-xs uppercase tracking-wide text-emerald-700">Name</div>
+                    <div className="mt-1 font-medium">{selectedStudent.name}</div>
+                  </div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <div className="text-xs uppercase tracking-wide text-emerald-700">Reg No</div>
+                    <div className="mt-1 font-medium">{selectedStudent.regNo}</div>
+                  </div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <div className="text-xs uppercase tracking-wide text-emerald-700">Class</div>
+                    <div className="mt-1 font-medium">{form.className || "N/A"}</div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Reg No */}
-            <Field label="Reg No">
-              <Input
-                value={form.regNo}
-                readOnly
-                placeholder="Select a student first"
-                className="h-11 bg-muted/40"
-              />
-            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Reg No">
+                <Input value={form.regNo} readOnly placeholder="Select a student first" className="h-11 bg-slate-100" />
+              </Field>
 
-            {/* Student Name */}
-            <Field label="Student Name">
-              <Input
-                value={form.studentName}
-                readOnly
-                placeholder="Select a student first"
-                className="h-11 bg-muted/40"
-              />
-            </Field>
+              <Field label="Student Name">
+                <Input value={form.studentName} readOnly placeholder="Select a student first" className="h-11 bg-slate-100" />
+              </Field>
 
-            {/* Class */}
-            <Field label="Class">
-              <Select value={form.classroomId} onValueChange={(v) => set("classroomId", v)} disabled>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder={loadingClasses ? "Loading classes..." : "Auto-filled from student"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field label="Class">
+                <Select value={form.classroomId} onValueChange={(v) => set("classroomId", v)} disabled>
+                  <SelectTrigger className="h-11 bg-slate-100">
+                    <SelectValue placeholder={loadingClasses ? "Loading classes..." : "Auto-filled from student"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((c) => (
+                      <SelectItem key={c._id} value={c._id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            {/* Fee Type */}
-            <Field label="Fee Type">
-              <Select value={form.feeType} onValueChange={(v) => set("feeType", v)}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select fee type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Tuition Fee">Tuition Fee</SelectItem>
-                  <SelectItem value="Lab Fee">Lab Fee</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field label="Fee Type">
+                <Select value={form.feeType} onValueChange={(v) => set("feeType", v)}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select fee type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Tuition Fee">Tuition Fee</SelectItem>
+                    <SelectItem value="Lab Fee">Lab Fee</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            {/* Amount */}
-            <Field label="Amount">
-              <Input 
-                type="number" 
-                inputMode="decimal" 
-                value={form.amount} 
-                onChange={(e) => set("amount", e.target.value)}
-                placeholder="Enter amount"
-                className="h-11"
-              />
-            </Field>
+              <Field label="Amount">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(e) => set("amount", e.target.value)}
+                  placeholder="Enter amount"
+                  className="h-11"
+                />
+              </Field>
 
-            {/* Date */}
-            <Field label="Date">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-11 w-full justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {prettyDate || "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(d) =>
-                      d &&
-                      set(
-                        "date",
-                        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-                      )
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
-            </Field>
+              <Field label="Date">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-11 w-full justify-start rounded-xl border-slate-200 bg-white text-left">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {prettyDate || "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(d) =>
+                        d &&
+                        set(
+                          "date",
+                          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                        )
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
+              </Field>
 
-            {/* Method */}
-            <Field label="Method">
-              <Select value={form.method} onValueChange={(v: Method) => set("method", v)}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="-">-</SelectItem>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Online">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field label="Method">
+                <Select value={form.method} onValueChange={(v: Method) => set("method", v)}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="-">-</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="Online">Online</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            {/* Status */}
-            <Field label="Status">
-              <Select value={form.status} onValueChange={(v: Status) => set("status", v)}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field label="Status">
+                <Select value={form.status} onValueChange={(v: Status) => set("status", v)}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Unpaid">Unpaid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                <p className="text-sm font-medium text-red-700">{error}</p>
               </div>
             )}
 
             {/* Save Payment Button */}
-            <div className="pt-4">
-              <Button type="submit" disabled={submitting} className="w-full h-12 text-base">
+            <div className="pt-2">
+              <Button type="submit" disabled={submitting} className="h-12 w-full rounded-full bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700">
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

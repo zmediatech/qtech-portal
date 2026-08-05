@@ -283,55 +283,100 @@ export default function FeesPage() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Fee Management</h1>
-
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchOrphanedCount} className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-
-          {orphanedCount > 0 && (
-            <Button
-              variant="outline"
-              onClick={cleanupOrphanedRecords}
-              disabled={cleanupLoading}
-              className="gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-            >
-              <Trash2 className="h-4 w-4" />
-              {cleanupLoading ? "Cleaning..." : `Clean Up (${orphanedCount})`}
-            </Button>
-          )}
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Record Payment
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[600px] sm:max-w-[600px]">
-              <SheetHeader>
-                <SheetTitle>Record Fee Payment</SheetTitle>
-                <SheetDescription>Add a new fee payment record to the system</SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                <FeePaymentForm onSuccess={handleCreated} />
+      <div className="space-y-5">
+        <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-800 px-4 py-5 text-white shadow-sm sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-emerald-200">
+                Finance
               </div>
-            </SheetContent>
-          </Sheet>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Fee Management</h1>
+              <p className="max-w-2xl text-sm text-slate-200 sm:text-base">
+                Search, record, and review student payments with a cleaner mobile-friendly workflow.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchOrphanedCount}
+                className="gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+
+              {orphanedCount > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={cleanupOrphanedRecords}
+                  disabled={cleanupLoading}
+                  className="gap-2 border-red-300/40 bg-red-500/10 text-red-100 hover:bg-red-500/20 hover:text-white"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {cleanupLoading ? "Cleaning..." : `Clean Up (${orphanedCount})`}
+                </Button>
+              )}
+
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button className="gap-2 rounded-full bg-white text-slate-950 hover:bg-slate-100">
+                    <Plus className="h-4 w-4" />
+                    Record Payment
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[100vw] max-w-none border-l border-slate-200 p-0 sm:w-[min(92vw,42rem)] sm:max-w-[42rem]">
+                  <div className="flex h-full flex-col">
+                    <SheetHeader className="border-b border-slate-200 px-4 py-4 sm:px-6">
+                      <SheetTitle>Record Fee Payment</SheetTitle>
+                      <SheetDescription>Add a new fee payment record to the system</SheetDescription>
+                    </SheetHeader>
+                    <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-3 sm:px-4 sm:py-4">
+                      <FeePaymentForm onSuccess={handleCreated} />
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Card className="rounded-2xl border-slate-200">
+            <CardHeader className="pb-2">
+              <CardDescription>Total Records</CardDescription>
+              <CardTitle className="text-3xl">{total.toLocaleString()}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="rounded-2xl border-slate-200">
+            <CardHeader className="pb-2">
+              <CardDescription>Current Page</CardDescription>
+              <CardTitle className="text-3xl">{page}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="rounded-2xl border-slate-200">
+            <CardHeader className="pb-2">
+              <CardDescription>Pages</CardDescription>
+              <CardTitle className="text-3xl">{pages}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className="rounded-2xl border-slate-200">
+            <CardHeader className="pb-2">
+              <CardDescription>Orphaned</CardDescription>
+              <CardTitle className="text-3xl">{orphanedCount.toLocaleString()}</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
 
       {orphanedCount > 0 && (
-        <Alert className="mt-4 border-amber-200 bg-amber-50">
+        <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800">
             Found {orphanedCount} fee record(s) for deleted students.
             <Button
               variant="link"
-              className="p-0 h-auto text-amber-800 underline ml-1"
+              className="h-auto p-0 pl-1 text-amber-800 underline"
               onClick={() => setShowOrphaned(!showOrphaned)}
             >
               {showOrphaned ? "Hide" : "Show"} orphaned records
@@ -344,8 +389,8 @@ export default function FeesPage() {
       )}
 
       {checkingOrphaned && (
-        <Alert className="mt-4 border-blue-200 bg-blue-50">
-          <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+        <Alert className="border-blue-200 bg-blue-50">
+          <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
           <AlertDescription className="text-blue-800">Checking for orphaned records...</AlertDescription>
         </Alert>
       )}
@@ -641,6 +686,7 @@ export default function FeesPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </AdminLayout>
   );
 }
