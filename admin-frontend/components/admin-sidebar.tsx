@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { getStoredUser } from "@/lib/session";
+import { getRoleHomePath, getStoredUser, normalizeRole } from "@/lib/session";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -35,7 +35,7 @@ type NavItem = {
 };
 
 const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "teacher", "student", "parent"] },
+  { name: "Dashboard", icon: LayoutDashboard, roles: ["admin", "teacher", "student", "parent"] },
   { name: "My Schedule", href: "/schedule", icon: CalendarDays, roles: ["admin", "teacher", "student", "parent"] },
   { name: "LMS", href: "/courses", icon: BookOpen, roles: ["admin", "teacher", "student", "parent"] },
   {
@@ -118,7 +118,7 @@ export function AdminSidebar({
 
   useEffect(() => {
     const user = getStoredUser();
-    setRole(user?.role);
+    setRole(normalizeRole(user?.role));
     setUserName(user?.name || "");
   }, []);
 
@@ -126,6 +126,7 @@ export function AdminSidebar({
     () => navigation.filter((item) => !item.roles || !role || item.roles.includes(role)),
     [role]
   );
+  const dashboardHref = getRoleHomePath(role);
 
   const [openGroups, setOpenGroups] = useState<string[]>(() => {
     const groups: string[] = [];
@@ -146,7 +147,7 @@ export function AdminSidebar({
   const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between border-b px-4 lg:h-[68px] lg:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link href={dashboardHref} className="flex items-center gap-2 font-semibold">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
             <ShieldCheck className="h-5 w-5" />
           </div>
@@ -219,13 +220,15 @@ export function AdminSidebar({
               );
             }
 
+            const href = item.name === "Dashboard" ? dashboardHref : item.href!;
+
             return (
-              <Link key={item.href} href={item.href!} onClick={() => setMobileOpen(false)}>
+              <Link key={href} href={href} onClick={() => setMobileOpen(false)}>
                 <Button
                   variant="ghost"
                   className={cn(
                     "w-full justify-start gap-2 px-3 py-2 font-normal",
-                    pathname === item.href && "bg-sidebar-primary text-sidebar-primary-foreground",
+                    pathname === href && "bg-sidebar-primary text-sidebar-primary-foreground",
                     collapsed && "justify-center px-2",
                   )}
                   title={collapsed ? item.name : undefined}

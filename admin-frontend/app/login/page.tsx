@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getApiBase } from "@/lib/session";
+import { getApiBase, getRoleHomePath } from "@/lib/session";
 
 type LoginSuccess = {
   message?: string;
   success?: boolean;
   token: string;
-  user: { email: string; name: string; id: string };
+  user: { email: string; name: string; id: string; role?: string };
 };
 
 type LoginError = {
@@ -29,10 +29,6 @@ export default function LoginPage() {
 
   const API_BASE = getApiBase();
 
-  const DASHBOARD_PATH =
-    (process.env.NEXT_PUBLIC_DASHBOARD_PATH || "/dashboard").trim() ||
-    "/dashboard";
-
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,15 +39,16 @@ export default function LoginPage() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const navigateToDashboard = () => {
-    router.replace(DASHBOARD_PATH);
+  const navigateToDashboard = (role?: string) => {
+    const dashboardPath = getRoleHomePath(role);
+    router.replace(dashboardPath);
 
     setTimeout(() => {
       if (
         typeof window !== "undefined" &&
-        window.location.pathname !== DASHBOARD_PATH
+        window.location.pathname !== dashboardPath
       ) {
-        window.location.replace(DASHBOARD_PATH);
+        window.location.replace(dashboardPath);
       }
     }, 50);
   };
@@ -94,7 +91,7 @@ export default function LoginPage() {
 
       localStorage.setItem("token", payload.token);
       localStorage.setItem("user", JSON.stringify(payload.user));
-      navigateToDashboard();
+      navigateToDashboard(payload.user?.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

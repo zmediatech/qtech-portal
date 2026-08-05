@@ -4,6 +4,10 @@ const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
 const connectDB = require("../config/db");
 
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "superadmin@gmail.com")
+  .toLowerCase()
+  .trim();
+
 const signup = async (req, res) => {
   try {
     const body = req.body || {};
@@ -64,8 +68,15 @@ const login = async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(403).json({ message: errorMsg, success: false });
 
+    const normalizedRole =
+      user.role || (email === ADMIN_EMAIL ? "admin" : "student");
+
+    if (user.role !== normalizedRole) {
+      await UserModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
+    }
+
     const token = jwt.sign(
-      { email: user.email, _id: user._id, role: user.role },
+      { email: user.email, _id: user._id, role: normalizedRole },
       process.env.JWT_SECRET || "secret-123",
       { expiresIn: "24h" }
     );
@@ -78,7 +89,7 @@ const login = async (req, res) => {
         email: user.email,
         name: user.name,
         id: user._id,
-        role: user.role,
+        role: normalizedRole,
         studentClass: user.studentClass || null,
         parentStudentIds: user.parentStudentIds || [],
         assignedClasses: user.assignedClasses || [],
