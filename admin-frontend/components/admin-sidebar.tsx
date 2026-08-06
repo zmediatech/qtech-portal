@@ -145,7 +145,7 @@ export function AdminSidebar({
   };
 
   const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-16 items-center justify-between border-b px-4 lg:h-[68px] lg:px-6">
         <Link href={dashboardHref} className="flex items-center gap-2 font-semibold">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
@@ -168,8 +168,8 @@ export function AdminSidebar({
         </div>
       )}
 
-      <ScrollArea className="flex-1 px-3 py-2">
-        <nav className="grid gap-1">
+      <ScrollArea className="min-h-0 flex-1 px-3 py-2">
+        <nav className="grid gap-1 pb-4">
           {visibleNavigation.map((item) => {
             if (item.children) {
               const isOpen = openGroups.includes(item.name);
