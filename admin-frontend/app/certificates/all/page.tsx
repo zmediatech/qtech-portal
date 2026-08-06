@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, BadgeCheck, ExternalLink } from "lucide-react";
+import { RoleGate } from "@/components/role-gate";
 
 type CertificateRecord = {
   _id: string;
@@ -30,12 +31,21 @@ export default function CertificatesAllPage() {
   const [error, setError] = useState<string>("");
   const [records, setRecords] = useState<CertificateRecord[]>([]);
 
+  const getAuthHeaders = () => {
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError("");
-        const res = await fetch(`${API_BASE}/api/certificates/records`, { cache: "no-store" });
+        const res = await fetch(`${API_BASE}/api/certificates/records`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+        });
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           throw new Error(json?.message || "Failed to load certificates");
@@ -51,8 +61,9 @@ export default function CertificatesAllPage() {
   }, [API_BASE]);
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Certificates are available to staff only.">
+      <AdminLayout>
+        <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">All Certificates</h1>
@@ -126,7 +137,8 @@ export default function CertificatesAllPage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

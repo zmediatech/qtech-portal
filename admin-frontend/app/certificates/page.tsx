@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RoleGate } from "@/components/role-gate";
 
 const FAMILIES = ["Times", "Helvetica", "Courier", "GreatVibes"] as const;
 const STYLES = ["normal", "bold", "italic", "boldItalic"] as const;
@@ -42,6 +43,24 @@ function canvasFont(fontStyle: string, fontSize: number, fontFamily: string) {
   const weight = fontStyle.includes("bold") ? "bold" : "normal";
   const italic = fontStyle.includes("italic") ? "italic" : "normal";
   return `${italic} ${weight} ${fontSize}px ${fontFamily}`;
+}
+
+function getAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function resolveClassId(student: Student | null) {
+  if (!student) return "";
+  if (typeof student.class === "string") return student.class;
+  return student.class?._id || "";
+}
+
+function resolveClassName(student: Student | null) {
+  if (!student) return "";
+  if (typeof student.class === "string") return student.class;
+  return student.class?.name || student.className || "";
 }
 
 type SignaturePadProps = {
@@ -186,6 +205,7 @@ type Student = {
   regNo: string;
   name: string;
   className?: string;
+  class?: string | { _id?: string; name?: string };
 };
 
 type CourseItem = {
@@ -254,7 +274,7 @@ export default function CertificatesPage() {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/students`);
+        const res = await fetch(`${API_BASE}/api/students`, { headers: getAuthHeaders() });
         const json = await res.json();
         const list = Array.isArray(json)
           ? json
@@ -276,8 +296,8 @@ export default function CertificatesPage() {
     const fetchCourseSources = async () => {
       try {
         const [classesRes, subjectsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/classes`, { cache: "no-store" }),
-          fetch(`${API_BASE}/api/subjects`, { cache: "no-store" }),
+          fetch(`${API_BASE}/api/classes`, { cache: "no-store", headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/api/subjects`, { cache: "no-store", headers: getAuthHeaders() }),
         ]);
 
         const classesJson = await classesRes.json().catch(() => null);
@@ -436,6 +456,13 @@ export default function CertificatesPage() {
       fd.append("academyName", academyName.trim());
       fd.append("companyName", companyName.trim());
       fd.append("courseName", courseName.trim());
+      if (selectedStudent) {
+        fd.append("studentId", selectedStudent._id);
+        const classId = resolveClassId(selectedStudent);
+        if (classId) fd.append("classId", classId);
+        const className = resolveClassName(selectedStudent);
+        if (className) fd.append("className", className);
+      }
       fd.append("leftSignerName", leftSignerName.trim());
       fd.append("leftSignerRole", leftSignerRole.trim());
       fd.append("rightSignerName", rightSignerName.trim());
@@ -466,7 +493,11 @@ export default function CertificatesPage() {
         }
       }
 
-      const res = await fetch(`${API_BASE}/api/certificates/make`, { method: "POST", body: fd });
+      const res = await fetch(`${API_BASE}/api/certificates/make`, {
+        method: "POST",
+        body: fd,
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) {
         const t = await res.text();
         throw new Error(t || "Failed to generate PDF");
@@ -551,8 +582,9 @@ export default function CertificatesPage() {
   };
 
   return (
-    <AdminLayout initialCollapsed>
-      <div className="space-y-6">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Certificates are available to staff only.">
+      <AdminLayout initialCollapsed>
+        <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Link href="/dashboard">
             <Button size="icon" variant="outline">
@@ -951,7 +983,8 @@ export default function CertificatesPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

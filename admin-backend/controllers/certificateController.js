@@ -5,6 +5,8 @@ const path = require('path');
 const crypto = require('crypto');
 const connectDB = require('../config/db');
 const CertificateModel = require('../models/Certificate');
+const UserModel = require('../models/User');
+const StudentModel = require('../models/Student');
 
 const DEFAULT_CUSTOM_FONT = path.join(__dirname, '..', 'fonts', 'GreatVibes-Regular.ttf');
 const CUSTOM_FONT_PATH = process.env.CERT_FONT_PATH || DEFAULT_CUSTOM_FONT;
@@ -14,6 +16,15 @@ const A4_PORTRAIT  = [595.28, 841.89];
 const A4_LANDSCAPE = [841.89, 595.28];
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+function toIdString(value) {
+  if (!value) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'object') {
+    return String(value._id || value.id || '');
+  }
+  return '';
+}
+
 function hexToRgb01(hex) {
   if (!hex) return null;
   const m = hex.replace('#', '').trim();
@@ -206,6 +217,72 @@ async function saveCertificateRecord(record) {
   return await CertificateModel.create(record);
 }
 
+async function getRequestUser(req) {
+  if (!req.user?.id) return null;
+  return await UserModel.findById(req.user.id)
+    .select('name email role assignedClasses assignedSubjects')
+    .lean();
+}
+
+function getAllowedClassIds(user) {
+  return Array.isArray(user?.assignedClasses)
+    ? user.assignedClasses.map(toIdString).filter(Boolean)
+    : [];
+}
+
+function canTeacherAccessCertificate(user, record, allowedClassIds) {
+  if (!user || user.role !== 'teacher') return false;
+
+  const recordClassId = toIdString(record.classId);
+  const recordStudentId = toIdString(record.studentId);
+  const generatedById = toIdString(record.generatedBy?.id);
+
+  if (generatedById && generatedById === String(user._id)) return true;
+  if (recordClassId && allowedClassIds.includes(recordClassId)) return true;
+
+  if (recordStudentId) {
+    const studentClassId = record.classId ? recordClassId : '';
+    if (studentClassId && allowedClassIds.includes(studentClassId)) return true;
+  }
+
+  return false;
+}
+
+async function getStudentScopeForTeacher(user, studentId, classId) {
+  const allowedClassIds = getAllowedClassIds(user);
+  const normalizedStudentId = toIdString(studentId);
+  const normalizedClassId = toIdString(classId);
+
+  if (!normalizedStudentId) {
+    return { ok: false, status: 400, message: 'Student is required for teacher-issued certificates' };
+  }
+
+  const student = await StudentModel.findById(normalizedStudentId).populate('class', 'name').lean();
+  if (!student) {
+    return { ok: false, status: 404, message: 'Student not found' };
+  }
+
+  const studentClassId = toIdString(student.class);
+  if (!studentClassId) {
+    return { ok: false, status: 400, message: 'Student class is required' };
+  }
+
+  if (normalizedClassId && normalizedClassId !== studentClassId) {
+    return { ok: false, status: 400, message: 'Selected class does not match student class' };
+  }
+
+  if (allowedClassIds.length && !allowedClassIds.includes(studentClassId)) {
+    return { ok: false, status: 403, message: 'You can only issue certificates for your assigned classes' };
+  }
+
+  return {
+    ok: true,
+    student,
+    classId: studentClassId,
+    className: typeof student.class === 'object' ? student.class?.name || '' : '',
+  };
+}
+
 async function renderPresetCertificate(pdf, payload) {
   const {
     recipientName,
@@ -376,9 +453,28 @@ async function renderPresetCertificate(pdf, payload) {
 exports.makeCertificate = async (req, res) => {
   try {
     await connectDB(process.env.MONGODB_URI);
+    const currentUser = await getRequestUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const file = req.file;
     const name = (req.body.name || '').toString().trim();
     if (!name) return res.status(400).json({ success: false, message: 'Student name is required' });
+
+    let studentId = toIdString(req.body.studentId);
+    let classId = toIdString(req.body.classId);
+    let className = (req.body.className || '').toString().trim();
+
+    if (currentUser.role === 'teacher') {
+      const scope = await getStudentScopeForTeacher(currentUser, studentId, classId);
+      if (!scope.ok) {
+        return res.status(scope.status).json({ success: false, message: scope.message });
+      }
+      studentId = toIdString(scope.student._id);
+      classId = scope.classId;
+      className = scope.className;
+    }
 
     const mode = (req.body.mode || 'upload').toString();
     const templateId = (req.body.templateId || 'classic-maroon-gold').toString();
@@ -394,6 +490,9 @@ exports.makeCertificate = async (req, res) => {
       academyName: (req.body.academyName || 'Academy Name').toString(),
       companyName: (req.body.companyName || 'Company Name').toString(),
       courseName: (req.body.courseName || '').toString(),
+      studentId,
+      classId,
+      className,
       leftSignerName: (req.body.leftSignerName || 'Principal Name').toString(),
       leftSignerRole: (req.body.leftSignerRole || 'Principal').toString(),
       rightSignerName: (req.body.rightSignerName || 'Director Name').toString(),
@@ -405,6 +504,11 @@ exports.makeCertificate = async (req, res) => {
       templateId,
       mode,
       verified: true,
+      generatedBy: {
+        id: String(currentUser._id || ''),
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+      },
     };
 
     if (mode === 'template' || !file) {
@@ -548,7 +652,21 @@ function toPublicCertificate(doc) {
 exports.getAllCertificates = async (_req, res) => {
   try {
     await connectDB(process.env.MONGODB_URI);
-    const list = await CertificateModel.find().sort({ createdAt: -1 }).lean();
+    const currentUser = await getRequestUser(_req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const query = {};
+    if (currentUser.role === 'teacher') {
+      const allowedClassIds = getAllowedClassIds(currentUser);
+      query.$or = [
+        { classId: { $in: allowedClassIds } },
+        { 'generatedBy.id': String(currentUser._id) },
+      ];
+    }
+
+    const list = await CertificateModel.find(query).sort({ createdAt: -1 }).lean();
     return res.status(200).json({ success: true, count: list.length, data: list.map(toPublicCertificate) });
   } catch (err) {
     console.error('getAllCertificates error:', err);
@@ -559,11 +677,24 @@ exports.getAllCertificates = async (_req, res) => {
 exports.getCertificateById = async (req, res) => {
   try {
     await connectDB(process.env.MONGODB_URI);
+    const currentUser = await getRequestUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const { certificateId } = req.params;
     const found = await CertificateModel.findOne({ certificateId }).lean();
     if (!found) {
       return res.status(404).json({ success: false, message: 'Certificate not found' });
     }
+
+    if (currentUser.role === 'teacher') {
+      const allowedClassIds = getAllowedClassIds(currentUser);
+      if (!canTeacherAccessCertificate(currentUser, found, allowedClassIds)) {
+        return res.status(403).json({ success: false, message: 'You can only view certificates for your assigned classes' });
+      }
+    }
+
     return res.status(200).json({ success: true, data: toPublicCertificate(found) });
   } catch (err) {
     console.error('getCertificateById error:', err);

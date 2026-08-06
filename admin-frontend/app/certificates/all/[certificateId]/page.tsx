@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BadgeCheck, Copy, ExternalLink, Loader2, Printer } from "lucide-react";
+import { RoleGate } from "@/components/role-gate";
 
 type CertificateRecord = {
   certificateId: string;
@@ -37,6 +38,12 @@ export default function CertificateDetailsPage() {
     []
   );
 
+  const getAuthHeaders = () => {
+    if (typeof window === "undefined") return {};
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [record, setRecord] = useState<CertificateRecord | null>(null);
@@ -46,7 +53,10 @@ export default function CertificateDetailsPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/api/certificates/records/${certificateId}`, { cache: "no-store" });
+        const res = await fetch(`${API_BASE}/api/certificates/records/${certificateId}`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+        });
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
           throw new Error(json?.message || "Certificate not found");
@@ -72,8 +82,9 @@ export default function CertificateDetailsPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Certificates are available to staff only.">
+      <AdminLayout>
+        <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Certificate Details</h1>
@@ -169,7 +180,8 @@ export default function CertificateDetailsPage() {
             <CardContent className="py-10 text-center text-sm text-muted-foreground">Certificate not found.</CardContent>
           </Card>
         )}
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

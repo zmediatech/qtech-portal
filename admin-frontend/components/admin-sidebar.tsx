@@ -46,7 +46,6 @@ function getNavigation(role?: string): NavItem[] {
       ...base,
       { name: "Attendance", href: "/attendance", icon: UserCheck, roles: ["student", "parent"] },
       { name: "Exams & Marks", href: "/exams", icon: ClipboardList, roles: ["student", "parent"] },
-      { name: "Certificates", href: "/certificates", icon: Award, roles: ["student", "parent"] },
     ];
   }
 
