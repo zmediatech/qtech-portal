@@ -44,6 +44,10 @@ function labelFor(item: string | SimpleItem | null | undefined) {
   return item.code ? `${item.name || "Unnamed"} (${item.code})` : item.name || "Unnamed";
 }
 
+function makeLookup(items: SimpleItem[]) {
+  return new Map(items.map((item) => [item._id, labelFor(item)]));
+}
+
 export default function UsersPage() {
   const stored = getStoredUser();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -71,6 +75,9 @@ export default function UsersPage() {
     [canManageSuperadmin, users]
   );
   const selectedUser = useMemo(() => visibleUsers.find((user) => user._id === selectedUserId) || null, [visibleUsers, selectedUserId]);
+  const classLabelById = useMemo(() => makeLookup(classes), [classes]);
+  const subjectLabelById = useMemo(() => makeLookup(subjects), [subjects]);
+  const studentLabelById = useMemo(() => makeLookup(students), [students]);
 
   useEffect(() => {
     if (stored?.role !== "superadmin") {
@@ -161,6 +168,19 @@ export default function UsersPage() {
       ...current,
       studentClass: current.studentClass === value ? "" : value,
     }));
+  };
+
+  const displayItem = (value: string | SimpleItem | null | undefined, lookup: Map<string, string>) => {
+    if (!value) return "None";
+    if (typeof value === "string") return lookup.get(value) || value;
+    return labelFor(value);
+  };
+
+  const displayList = (items: Array<string | SimpleItem> | null | undefined, lookup: Map<string, string>) => {
+    const labels = (items || [])
+      .map((item) => (typeof item === "string" ? lookup.get(item) || item : labelFor(item)))
+      .filter(Boolean);
+    return labels.length ? labels.join(", ") : "None";
   };
 
   const saveUser = async (event: FormEvent) => {
@@ -419,19 +439,19 @@ export default function UsersPage() {
                     <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
                       <div>
                         <div className="font-medium text-slate-900">Class</div>
-                        <div>{labelFor(userRow.studentClass) || "None"}</div>
+                        <div>{displayItem(userRow.studentClass, classLabelById)}</div>
                       </div>
                       <div>
                         <div className="font-medium text-slate-900">Teacher classes</div>
-                        <div>{(userRow.assignedClasses || []).map(labelFor).filter(Boolean).join(", ") || "None"}</div>
+                        <div>{displayList(userRow.assignedClasses, classLabelById)}</div>
                       </div>
                       <div>
                         <div className="font-medium text-slate-900">Teacher subjects</div>
-                        <div>{(userRow.assignedSubjects || []).map(labelFor).filter(Boolean).join(", ") || "None"}</div>
+                        <div>{displayList(userRow.assignedSubjects, subjectLabelById)}</div>
                       </div>
                       <div>
                         <div className="font-medium text-slate-900">Linked students</div>
-                        <div>{(userRow.parentStudentIds || []).map(labelFor).filter(Boolean).join(", ") || "None"}</div>
+                        <div>{displayList(userRow.parentStudentIds, studentLabelById)}</div>
                       </div>
                     </div>
 
