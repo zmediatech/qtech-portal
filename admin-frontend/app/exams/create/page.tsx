@@ -8,12 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RoleGate } from "@/components/role-gate";
 
 const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 const API_BASE = `${RAW_BASE.replace(/\/+$/,"")}/api`;
 
 type Class = { _id: string; name: string };
 type Subject = { _id: string; name: string };
+
+function getAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -37,8 +44,8 @@ export default function CreateExamPage() {
     (async () => {
       try {
         const [cr, sr] = await Promise.all([
-          fetch(`${API_BASE}/classes`, { cache: "no-store" }),
-          fetch(`${API_BASE}/subjects`, { cache: "no-store" }),
+          fetch(`${API_BASE}/classes`, { cache: "no-store", headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/subjects`, { cache: "no-store", headers: getAuthHeaders() }),
         ]);
         const cjson = await cr.json();
         const sjson = await sr.json();
@@ -68,7 +75,7 @@ export default function CreateExamPage() {
 
       const res = await fetch(`${API_BASE}/exams`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           title,
           classId,
@@ -93,22 +100,23 @@ export default function CreateExamPage() {
   };
 
   return (
-    <AdminLayout>
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Exam</CardTitle>
-          <CardDescription>Fill in your exam details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm text-muted-foreground">Exam Title</label>
-            <Input
-              placeholder="Enter exam title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1"
-            />
-          </div>
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Only staff can create exams.">
+      <AdminLayout>
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Exam</CardTitle>
+            <CardDescription>Fill in your exam details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm text-muted-foreground">Exam Title</label>
+              <Input
+                placeholder="Enter exam title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1"
+              />
+            </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -171,11 +179,12 @@ export default function CreateExamPage() {
             />
           </div>
 
-          <Button onClick={onSubmit} disabled={saving || loadingOpts}>
-            {saving ? "Saving..." : "Create Exam"}
-          </Button>
-        </CardContent>
-      </Card>
-    </AdminLayout>
+            <Button onClick={onSubmit} disabled={saving || loadingOpts}>
+              {saving ? "Saving..." : "Create Exam"}
+            </Button>
+          </CardContent>
+        </Card>
+      </AdminLayout>
+    </RoleGate>
   );
 }

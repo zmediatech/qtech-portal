@@ -7,6 +7,7 @@ import { ExamForm } from "@/components/exam-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
+import { RoleGate } from "@/components/role-gate";
 
 const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 function withApiBase(base: string) {
@@ -14,6 +15,12 @@ function withApiBase(base: string) {
   return /\/api$/i.test(clean) ? clean : `${clean}/api`;
 }
 const API_BASE = withApiBase(RAW_BASE);
+
+function getAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 type QuestionType = "multiple-choice" | "short-answer" | "essay";
 
@@ -133,9 +140,9 @@ export default function EditExamPage() {
       setLoading(true);
       try {
         const [er, cr, sr] = await Promise.all([
-          fetch(`${API_BASE}/exams/${id}`, { cache: "no-store" }),
-          fetch(`${API_BASE}/classes`, { cache: "no-store" }),
-          fetch(`${API_BASE}/subjects`, { cache: "no-store" }),
+          fetch(`${API_BASE}/exams/${id}`, { cache: "no-store", headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/classes`, { cache: "no-store", headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/subjects`, { cache: "no-store", headers: getAuthHeaders() }),
         ]);
         const [ej, cj, sj] = await Promise.all([er.json(), cr.json(), sr.json()]);
         if (!er.ok) throw new Error(ej?.error || "Failed to load exam");
@@ -227,7 +234,7 @@ export default function EditExamPage() {
 
       const res = await fetch(`${API_BASE}/exams/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
@@ -257,80 +264,84 @@ export default function EditExamPage() {
 
   if (!id || loading || !uiExam) {
     return (
-      <AdminLayout>
-        <div>Loading...</div>
-      </AdminLayout>
+      <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Only staff can edit exams.">
+        <AdminLayout>
+          <div>Loading...</div>
+        </AdminLayout>
+      </RoleGate>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold md:text-2xl">Edit Exam</h1>
-          <p className="text-muted-foreground">
-            Update exam details and questions
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Exam Details</CardTitle>
-          <CardDescription>
-            Modify the exam information and questions as needed
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* ✅ New textarea for full paper */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              Full Paper Content
-            </label>
-            <textarea
-              className="w-full rounded border p-2 text-sm"
-              rows={10}
-              value={uiExam.fullPaperText || ""}
-              onChange={(e) =>
-                setUiExam({ ...(uiExam as UIExam), fullPaperText: e.target.value })
-              }
-              placeholder="Paste or write the complete paper here..."
-            />
-            <Button className="mt-2" onClick={handleDownloadPDF}>
-              Download Paper as PDF
-            </Button>
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Only staff can edit exams.">
+      <AdminLayout>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold md:text-2xl">Edit Exam</h1>
+            <p className="text-muted-foreground">
+              Update exam details and questions
+            </p>
           </div>
+        </div>
 
-          {/* Existing exam form */}
-          <ExamForm
-            exam={{
-              ...uiExam,
-              instructions: uiExam.instructions ?? "",
-              questions: uiExam.questions.map((q, idx) => ({
-                ...q,
-                id: q.id ?? String(idx + 1),
-                points: q.points ?? 1,
-                type: q.type ?? "short-answer",
-                options: q.type === "multiple-choice" ? q.options ?? [] : [],
-                correctOptionIndex:
-                  q.type === "multiple-choice" &&
-                  typeof q.correctOptionIndex === "number"
-                    ? q.correctOptionIndex
-                    : undefined,
-                correctAnswerText:
-                  q.type !== "multiple-choice" ? q.correctAnswerText ?? "" : undefined,
-                answerText: q.answerText ?? "",
-              })),
-            }}
-            // @ts-ignore
-            classOptions={classes}
-            // @ts-ignore
-            subjectOptions={subjects}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-          />
-        </CardContent>
-      </Card>
-    </AdminLayout>
+        <Card>
+          <CardHeader>
+            <CardTitle>Exam Details</CardTitle>
+            <CardDescription>
+              Modify the exam information and questions as needed
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* ✅ New textarea for full paper */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">
+                Full Paper Content
+              </label>
+              <textarea
+                className="w-full rounded border p-2 text-sm"
+                rows={10}
+                value={uiExam.fullPaperText || ""}
+                onChange={(e) =>
+                  setUiExam({ ...(uiExam as UIExam), fullPaperText: e.target.value })
+                }
+                placeholder="Paste or write the complete paper here..."
+              />
+              <Button className="mt-2" onClick={handleDownloadPDF}>
+                Download Paper as PDF
+              </Button>
+            </div>
+
+            {/* Existing exam form */}
+            <ExamForm
+              exam={{
+                ...uiExam,
+                instructions: uiExam.instructions ?? "",
+                questions: uiExam.questions.map((q, idx) => ({
+                  ...q,
+                  id: q.id ?? String(idx + 1),
+                  points: q.points ?? 1,
+                  type: q.type ?? "short-answer",
+                  options: q.type === "multiple-choice" ? q.options ?? [] : [],
+                  correctOptionIndex:
+                    q.type === "multiple-choice" &&
+                    typeof q.correctOptionIndex === "number"
+                      ? q.correctOptionIndex
+                      : undefined,
+                  correctAnswerText:
+                    q.type !== "multiple-choice" ? q.correctAnswerText ?? "" : undefined,
+                  answerText: q.answerText ?? "",
+                })),
+              }}
+              // @ts-ignore
+              classOptions={classes}
+              // @ts-ignore
+              subjectOptions={subjects}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
+          </CardContent>
+        </Card>
+      </AdminLayout>
+    </RoleGate>
   );
 }

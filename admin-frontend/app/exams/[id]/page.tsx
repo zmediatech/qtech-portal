@@ -19,6 +19,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Calendar, FileText, Download } from "lucide-react";
+import { getStoredUser, normalizeRole, type SessionRole } from "@/lib/session";
 
 declare global {
   interface Window {
@@ -61,6 +62,12 @@ type Exam = {
 
 type Klass = { _id: string; name: string };
 type Subject = { _id: string; name: string };
+
+function getAuthHeaders() {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 function formatDateTime(dt: string | Date) {
   const d = typeof dt === "string" ? new Date(dt) : dt;
@@ -353,6 +360,7 @@ export default function ExamsPage() {
   const [loading, setLoading] = useState(false);
   const [exams, setExams] = useState<Exam[]>([]);
   const [total, setTotal] = useState(0);
+  const [role, setRole] = useState<SessionRole>("student");
 
   const [classes, setClasses] = useState<Klass[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -362,12 +370,19 @@ export default function ExamsPage() {
   const [subjectId, setSubjectId] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
 
+  const canManage = role === "superadmin" || role === "admin" || role === "teacher";
+
+  useEffect(() => {
+    const user = getStoredUser();
+    setRole(normalizeRole(user?.role));
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
         const [cr, sr] = await Promise.all([
-          fetch(`${API_BASE}/classes`, { cache: "no-store" }),
-          fetch(`${API_BASE}/subjects`, { cache: "no-store" }),
+          fetch(`${API_BASE}/classes`, { cache: "no-store", headers: getAuthHeaders() }),
+          fetch(`${API_BASE}/subjects`, { cache: "no-store", headers: getAuthHeaders() }),
         ]);
         const cjson = await cr.json();
         const sjson = await sr.json();
@@ -392,7 +407,10 @@ export default function ExamsPage() {
     setLoading(true);
     try {
       const sp = new URLSearchParams(queryObj).toString();
-      const res = await fetch(`${API_BASE}/exams${sp ? `?${sp}` : ""}`, { cache: "no-store" });
+      const res = await fetch(`${API_BASE}/exams${sp ? `?${sp}` : ""}`, {
+        cache: "no-store",
+        headers: getAuthHeaders(),
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to load");
       setExams(json.data || []);
@@ -414,7 +432,7 @@ export default function ExamsPage() {
   const onDelete = async (id: string) => {
     if (!confirm("Delete this exam?")) return;
     try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE}/exams/${id}`, { method: "DELETE", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Delete failed");
       await listExams();
@@ -426,7 +444,7 @@ export default function ExamsPage() {
   /** Export Questions-only PDF */
   const onDownload = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, { cache: "no-store" });
+      const res = await fetch(`${API_BASE}/exams/${id}`, { cache: "no-store", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to load exam");
       const exam: Exam = json.data;
@@ -484,7 +502,7 @@ export default function ExamsPage() {
   /** Export Answers-only PDF */
   const onAnswerDownload = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/exams/${id}`, { cache: "no-store" });
+      const res = await fetch(`${API_BASE}/exams/${id}`, { cache: "no-store", headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to load exam");
       const exam: Exam = json.data;
@@ -546,12 +564,14 @@ export default function ExamsPage() {
           <h1 className="text-lg font-semibold md:text-2xl">Exams</h1>
           <p className="text-muted-foreground">Manage exams and assessments</p>
         </div>
-        <Link href="/exams/create">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Exam
-          </Button>
-        </Link>
+        {canManage ? (
+          <Link href="/exams/create">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Exam
+            </Button>
+          </Link>
+        ) : null}
       </div>
 
       <Card>
@@ -658,39 +678,48 @@ export default function ExamsPage() {
                     <Badge variant="secondary" className={getStatusColor(e.status)}>{e.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
+                    {canManage ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/exams/${e._id}`}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/exams/${e._id}/edit`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onAnswerDownload(e._id)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Answers
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDownload(e._id)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Exam
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(e._id)}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Link href={`/exams/${e._id}`}>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/exams/${e._id}`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/exams/${e._id}/edit`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAnswerDownload(e._id)}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Answers
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDownload(e._id)}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Exam
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(e._id)}>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </Link>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
