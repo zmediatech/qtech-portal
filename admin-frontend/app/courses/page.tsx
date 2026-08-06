@@ -69,7 +69,7 @@ export default function CoursesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const role = user?.role || "student";
-  const canManage = role === "admin" || role === "teacher";
+  const canManage = role === "superadmin" || role === "admin" || role === "teacher";
 
   const [courseForm, setCourseForm] = useState({
     title: "",

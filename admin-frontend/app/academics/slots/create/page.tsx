@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { SlotForm } from "@/components/slot-form";
 import { AdminLayout } from "@/components/admin-layout";
+import { RoleGate } from "@/components/role-gate";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
@@ -32,11 +33,13 @@ export default function CreateSlotPage() {
   };
 
   return (
-    <AdminLayout>
-      <h1 className="text-lg font-semibold md:text-2xl">Create Time Slot</h1>
-      <div className="mt-4">
-        <SlotForm onSubmit={handleSubmit} />
-      </div>
-    </AdminLayout>
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Timetable management is limited to staff.">
+      <AdminLayout>
+        <h1 className="text-lg font-semibold md:text-2xl">Create Time Slot</h1>
+        <div className="mt-4">
+          <SlotForm onSubmit={handleSubmit} />
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

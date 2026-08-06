@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog"
 import { format } from "date-fns"
 import { Label } from "@/components/ui/label"
+import { RoleGate } from "@/components/role-gate"
 
 // ===== Types =====
 type Expense = {
@@ -229,8 +230,9 @@ export default function ExpensesPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between">
+    <RoleGate allowedRoles={["superadmin"]} message="Expense management is reserved for superadmin.">
+      <AdminLayout>
+        <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Expense Management</h1>
         <Link href="/admin/expenses/create">
           <Button className="gap-2">
@@ -492,6 +494,7 @@ export default function ExpensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+      </AdminLayout>
+    </RoleGate>
   )
 }

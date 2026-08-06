@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getStoredUser } from "@/lib/session"
+import { RoleGate } from "@/components/role-gate"
 import { Eye, EyeOff, Lock, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
 
 // Define interfaces for type safety
@@ -45,6 +47,12 @@ export default function SettingsPage() {
 
   // Check if token exists on component mount
   useEffect(() => {
+    const user = getStoredUser()
+    if (user?.role !== "superadmin") {
+      window.location.href = "/dashboard"
+      return
+    }
+
     // Just check if token exists, don't verify it
     const token = getToken()
     console.log('Token found:', token ? 'Yes' : 'No')
@@ -227,8 +235,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
+    <RoleGate allowedRoles={["superadmin"]} message="System settings are reserved for superadmin.">
+      <AdminLayout>
+        <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-semibold md:text-2xl">Settings</h1>
       </div>
 
@@ -393,7 +402,8 @@ export default function SettingsPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   )
 }

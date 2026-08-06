@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect } from "react"
 import { AdminLayout } from "@/components/admin-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -8,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Download, Filter, DollarSign } from "lucide-react"
+import { getStoredUser } from "@/lib/session"
+import { RoleGate } from "@/components/role-gate"
 
 const financeData = [
   { month: "January 2024", fees: 45000, expenses: 28000, profit: 17000 },
@@ -35,9 +40,17 @@ const examReports = [
 ]
 
 export default function ReportsPage() {
+  useEffect(() => {
+    const user = getStoredUser()
+    if (user?.role !== "superadmin") {
+      window.location.href = "/dashboard"
+    }
+  }, [])
+
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between">
+    <RoleGate allowedRoles={["superadmin"]} message="Reports are reserved for superadmin.">
+      <AdminLayout>
+        <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Reports & Analytics</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2 bg-transparent">
@@ -334,6 +347,7 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </AdminLayout>
+      </AdminLayout>
+    </RoleGate>
   )
 }

@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FeePaymentForm } from "@/components/fee-payment-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RoleGate } from "@/components/role-gate";
 import {
   MoreHorizontal,
   Plus,
@@ -282,8 +283,9 @@ export default function FeesPage() {
   const currentPageOrphanedCount = records.filter((r) => r.studentExists === false).length;
 
   return (
-    <AdminLayout>
-      <div className="space-y-5">
+    <RoleGate allowedRoles={["superadmin"]} message="Fee management is reserved for superadmin.">
+      <AdminLayout>
+        <div className="space-y-5">
         <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-800 px-4 py-5 text-white shadow-sm sm:px-6 sm:py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
@@ -687,9 +689,10 @@ export default function FeesPage() {
         </DialogContent>
       </Dialog>
       </div>
-    </AdminLayout>
-  );
-}
+      </AdminLayout>
+    </RoleGate>
+    );
+  }
 
 function SummaryTile({ label, value }: { label: string; value: string }) {
   return (

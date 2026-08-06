@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { apiUrl, authHeaders } from "@/lib/api";
 import { getStoredUser } from "@/lib/session";
+import { RoleGate } from "@/components/role-gate";
 import { Edit3, Plus, Trash2, Users2 } from "lucide-react";
 
 type SimpleItem = { _id: string; name?: string; code?: string };
@@ -72,7 +73,7 @@ export default function UsersPage() {
   const selectedUser = useMemo(() => visibleUsers.find((user) => user._id === selectedUserId) || null, [visibleUsers, selectedUserId]);
 
   useEffect(() => {
-    if (stored?.role !== "admin" && stored?.role !== "superadmin") {
+    if (stored?.role !== "superadmin") {
       window.location.href = "/dashboard";
     }
   }, [stored]);
@@ -230,8 +231,9 @@ export default function UsersPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <RoleGate allowedRoles={["superadmin"]} message="User and role management is reserved for superadmin.">
+      <AdminLayout>
+        <div className="space-y-6">
         <div className="rounded-3xl border bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-800 p-5 text-white sm:p-6">
           <div className="flex items-center gap-3">
             <Users2 className="h-6 w-6" />
@@ -451,7 +453,8 @@ export default function UsersPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

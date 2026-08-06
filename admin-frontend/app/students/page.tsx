@@ -3,11 +3,13 @@ import { AdminLayout } from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { StudentTable } from "@/components/student-table"
 import { Plus } from "lucide-react"
+import { RoleGate } from "@/components/role-gate"
 
 export default function StudentsPage() {
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Student management is limited to staff.">
+      <AdminLayout>
+        <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Students</h1>
         <Link href="/students/admit">
           <Button className="gap-2">
@@ -17,7 +19,8 @@ export default function StudentsPage() {
         </Link>
       </div>
 
-      <StudentTable />
-    </AdminLayout>
+        <StudentTable />
+      </AdminLayout>
+    </RoleGate>
   )
 }

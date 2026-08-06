@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { RoleGate } from "@/components/role-gate";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -306,8 +307,9 @@ export default function AttendanceMarkingPage() {
   }, [attendance, students]);
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Attendance management is limited to staff.">
+      <AdminLayout>
+        <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Mark Attendance</CardTitle>
@@ -486,7 +488,8 @@ export default function AttendanceMarkingPage() {
             </Card>
           </div>
         </div>
-      </div>
-    </AdminLayout>
+        </div>
+      </AdminLayout>
+    </RoleGate>
   );
 }

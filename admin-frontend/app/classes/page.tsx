@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { RoleGate } from "@/components/role-gate"
 import { MoreHorizontal, Plus, Edit, Trash2, Eye, Users, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
@@ -268,8 +269,10 @@ function ClassesContent() {
 
 export default function ClassesPage() {
   return (
-    <AdminLayout>
-      <ClassesContent />
-    </AdminLayout>
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Class management is limited to staff.">
+      <AdminLayout>
+        <ClassesContent />
+      </AdminLayout>
+    </RoleGate>
   )
 }

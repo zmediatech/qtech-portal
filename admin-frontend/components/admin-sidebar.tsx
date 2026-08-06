@@ -34,68 +34,143 @@ type NavItem = {
   roles?: Array<"superadmin" | "admin" | "teacher" | "student" | "parent">;
 };
 
-const navigation: NavItem[] = [
-  { name: "Dashboard", icon: LayoutDashboard, roles: ["admin", "teacher", "student", "parent"] },
-  { name: "My Schedule", href: "/schedule", icon: CalendarDays, roles: ["admin", "teacher", "student", "parent"] },
-  { name: "LMS", href: "/courses", icon: BookOpen, roles: ["admin", "teacher", "student", "parent"] },
-  {
-    name: "Students",
-    icon: Users,
-    roles: ["admin", "teacher"],
-    children: [
-      { name: "Admit Student", href: "/students/admit" },
-      { name: "All Students", href: "/students" },
-      { name: "Graduated", href: "/students/graduated" },
-    ],
-  },
-  {
-    name: "Academics",
-    icon: GraduationCap,
-    roles: ["admin", "teacher"],
-    children: [
-      { name: "Classes", href: "/classes" },
-      { name: "Subjects", href: "/subjects" },
-      { name: "Timetables & Slots", href: "/academics/slots" },
-    ],
-  },
-  {
-    name: "Attendance",
-    icon: UserCheck,
-    roles: ["admin", "teacher"],
-    children: [
-      { name: "Mark Attendance", href: "/attendance" },
-      { name: "Attendance Records", href: "/attendance/records" },
-    ],
-  },
-  {
-    name: "Exams & Marks",
-    icon: ClipboardList,
-    roles: ["admin", "teacher"],
-    children: [
-      { name: "Exams", href: "/exams" },
-      { name: "Marks", href: "/marks" },
-    ],
-  },
-  {
-    name: "Certificates",
-    icon: Award,
-    roles: ["admin", "teacher"],
-    children: [
-      { name: "Create Certificate", href: "/certificates" },
-      { name: "All Certificates", href: "/certificates/all" },
-    ],
-  },
-  {
-    name: "Administrative",
-    icon: Building2,
-    roles: ["admin"],
-    children: [
-      { name: "Fees", href: "/admin/fees" },
-      { name: "Expenses", href: "/admin/expenses" },
-      { name: "Users & Roles", href: "/users" },
-    ],
-  },
-];
+function getNavigation(role?: string): NavItem[] {
+  const base: NavItem[] = [
+    { name: "Dashboard", icon: LayoutDashboard, roles: ["superadmin", "admin", "teacher", "student", "parent"] },
+    { name: "My Schedule", href: "/schedule", icon: CalendarDays, roles: ["superadmin", "admin", "teacher", "student", "parent"] },
+    { name: "LMS", href: "/courses", icon: BookOpen, roles: ["superadmin", "admin", "teacher", "student", "parent"] },
+  ];
+
+  if (role === "student" || role === "parent") {
+    return [
+      ...base,
+      { name: "Attendance", href: "/attendance", icon: UserCheck, roles: ["student", "parent"] },
+      { name: "Exams & Marks", href: "/exams", icon: ClipboardList, roles: ["student", "parent"] },
+      { name: "Certificates", href: "/certificates", icon: Award, roles: ["student", "parent"] },
+    ];
+  }
+
+  if (role === "teacher") {
+    return [
+      ...base,
+      {
+        name: "Students",
+        icon: Users,
+        roles: ["teacher"],
+        children: [
+          { name: "Admit Student", href: "/students/admit" },
+          { name: "All Students", href: "/students" },
+          { name: "Graduated", href: "/students/graduated" },
+        ],
+      },
+      {
+        name: "Academics",
+        icon: GraduationCap,
+        roles: ["teacher"],
+        children: [
+          { name: "Classes", href: "/classes" },
+          { name: "Subjects", href: "/subjects" },
+          { name: "Timetables & Slots", href: "/academics/slots" },
+        ],
+      },
+      {
+        name: "Attendance",
+        icon: UserCheck,
+        roles: ["teacher"],
+        children: [
+          { name: "Mark Attendance", href: "/attendance" },
+          { name: "Attendance Records", href: "/attendance/records" },
+        ],
+      },
+      {
+        name: "Exams & Marks",
+        icon: ClipboardList,
+        roles: ["teacher"],
+        children: [
+          { name: "Exams", href: "/exams" },
+          { name: "Marks", href: "/marks" },
+        ],
+      },
+      {
+        name: "Certificates",
+        icon: Award,
+        roles: ["teacher"],
+        children: [
+          { name: "Create Certificate", href: "/certificates" },
+          { name: "All Certificates", href: "/certificates/all" },
+        ],
+      },
+    ];
+  }
+
+  if (role === "superadmin" || role === "admin") {
+    return [
+      ...base,
+      {
+        name: "Students",
+        icon: Users,
+        roles: ["superadmin", "admin"],
+        children: [
+          { name: "Admit Student", href: "/students/admit" },
+          { name: "All Students", href: "/students" },
+          { name: "Graduated", href: "/students/graduated" },
+        ],
+      },
+      {
+        name: "Academics",
+        icon: GraduationCap,
+        roles: ["superadmin", "admin"],
+        children: [
+          { name: "Classes", href: "/classes" },
+          { name: "Subjects", href: "/subjects" },
+          { name: "Timetables & Slots", href: "/academics/slots" },
+        ],
+      },
+      {
+        name: "Attendance",
+        icon: UserCheck,
+        roles: ["superadmin", "admin"],
+        children: [
+          { name: "Mark Attendance", href: "/attendance" },
+          { name: "Attendance Records", href: "/attendance/records" },
+        ],
+      },
+      {
+        name: "Exams & Marks",
+        icon: ClipboardList,
+        roles: ["superadmin", "admin"],
+        children: [
+          { name: "Exams", href: "/exams" },
+          { name: "Marks", href: "/marks" },
+        ],
+      },
+      {
+        name: "Certificates",
+        icon: Award,
+        roles: ["superadmin", "admin"],
+        children: [
+          { name: "Create Certificate", href: "/certificates" },
+          { name: "All Certificates", href: "/certificates/all" },
+        ],
+      },
+      {
+        name: "Administrative",
+        icon: Building2,
+        roles: ["superadmin"],
+        children: [
+          { name: "Fees", href: "/admin/fees" },
+          { name: "Expenses", href: "/admin/expenses" },
+          { name: "Users & Roles", href: "/users" },
+          { name: "System Settings", href: "/settings" },
+          { name: "Reports", href: "/reports" },
+          { name: "Audit Logs", href: "/audit-logs" },
+        ],
+      },
+    ];
+  }
+
+  return base;
+}
 
 interface SidebarProps {
   className?: string;
@@ -122,21 +197,20 @@ export function AdminSidebar({
     setUserName(user?.name || "");
   }, []);
 
-  const visibleNavigation = useMemo(
-    () => navigation.filter((item) => !item.roles || !role || role === "superadmin" || item.roles.includes(role)),
-    [role]
-  );
+  const visibleNavigation = useMemo(() => getNavigation(role), [role]);
   const dashboardHref = getRoleHomePath(role);
 
-  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  useEffect(() => {
     const groups: string[] = [];
-    for (const item of navigation) {
+    for (const item of visibleNavigation) {
       if (item.children?.some((child) => pathname === child.href)) {
         groups.push(item.name);
       }
     }
-    return groups;
-  });
+    setOpenGroups(groups);
+  }, [pathname, visibleNavigation]);
 
   const toggleGroup = (groupName: string) => {
     setOpenGroups((prev) =>

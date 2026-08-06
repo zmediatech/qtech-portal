@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { RoleGate } from "@/components/role-gate"
 import {
   MoreHorizontal,
   Plus,
@@ -134,9 +135,10 @@ export default function SubjectsPage() {
   }
 
   return (
-    <AdminLayout>
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Subject management is limited to staff.">
+      <AdminLayout>
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Subjects</h1>
         <Link href="/subjects/create">
           <Button className="gap-2">
@@ -314,6 +316,7 @@ export default function SubjectsPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+      </AdminLayout>
+    </RoleGate>
   )
 }

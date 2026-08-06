@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, MapPin, Monitor, Plus } from "lucide-react";
+import { RoleGate } from "@/components/role-gate";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
@@ -145,13 +146,14 @@ export default function SlotsPage() {
   };
 
   return (
-    <AdminLayout>
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Time Slots</h1>
-        <Button onClick={() => router.push("/academics/slots/create")}>
-          <Plus className="mr-2 h-4 w-4" /> Add Time Slot
-        </Button>
-      </div>
+    <RoleGate allowedRoles={["superadmin", "admin", "teacher"]} message="Timetable management is limited to staff.">
+      <AdminLayout>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold md:text-2xl">Time Slots</h1>
+          <Button onClick={() => router.push("/academics/slots/create")}>
+            <Plus className="mr-2 h-4 w-4" /> Add Time Slot
+          </Button>
+        </div>
 
       {loading && (
         <Card className="mt-4">
@@ -263,6 +265,7 @@ export default function SlotsPage() {
           )}
         </div>
       )}
-    </AdminLayout>
+      </AdminLayout>
+    </RoleGate>
   );
 }
