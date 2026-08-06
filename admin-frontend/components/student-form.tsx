@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -34,13 +35,6 @@ interface StudentFormProps {
     admissionDate?: string; // ISO date (YYYY-MM-DD)
   };
   onSubmit?: (data: any) => void;
-}
-
-function authHeaders(): HeadersInit {
-  // If you need token:
-  // const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  // return token ? { Authorization: `Bearer ${token}` } : {};
-  return {};
 }
 
 export function StudentForm({ student, onSubmit }: StudentFormProps) {

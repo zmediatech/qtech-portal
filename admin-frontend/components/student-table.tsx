@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MoreHorizontal, Search, Download, Eye, Edit, Trash2, Loader2, RefreshCw } from "lucide-react"
+import { apiUrl, authHeaders } from "@/lib/api"
+import { getStoredUser, normalizeRole, type SessionRole } from "@/lib/session"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +66,13 @@ export function StudentTable({
   )
   const [feeStatusFilter, setFeeStatusFilter] = useState("all") // ★ ADDED
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
+  const [role, setRole] = useState<SessionRole>("student")
+  const canManageRows = role === "superadmin" || role === "admin"
+
+  useEffect(() => {
+    const user = getStoredUser()
+    setRole(normalizeRole(user?.role))
+  }, [])
 
   // Fetch students from your API
   const fetchStudents = async () => {
@@ -92,8 +101,8 @@ export function StudentTable({
         params.append("feeStatus", feeStatusFilter)
       }
 
-      const url = `https://qtech-backend.vercel.app/api/students${params.toString() ? `?${params.toString()}` : ''}`
-      const response = await fetch(url)
+      const url = apiUrl(`/students${params.toString() ? `?${params.toString()}` : ''}`)
+      const response = await fetch(url, { headers: authHeaders() })
       if (!response.ok) throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
       
       const result = await response.json()
@@ -115,7 +124,7 @@ export function StudentTable({
   const handleDeleteStudent = async (studentId: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return
     try {
-      const response = await fetch(`https://qtech-backend.vercel.app/api/students/${studentId}`, { method: 'DELETE' })
+      const response = await fetch(apiUrl(`/students/${studentId}`), { method: 'DELETE', headers: authHeaders() })
       const result = await response.json()
       if (response.ok && result.success) {
         setStudents(prev => prev.filter(s => s._id !== studentId))
@@ -292,14 +301,16 @@ export function StudentTable({
               </SelectContent>
             </Select>
 
-            <Button variant="outline" className="gap-2 bg-transparent">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+            {canManageRows && (
+              <Button variant="outline" className="gap-2 bg-transparent">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            )}
           </div>
         </div>
 
-        {selectedStudents.length > 0 && (
+        {canManageRows && selectedStudents.length > 0 && (
           <div className="flex items-center gap-2 rounded-md bg-muted p-2">
             <span className="text-sm text-muted-foreground">{selectedStudents.length} student(s) selected</span>
             <Button size="sm" variant="outline">
@@ -318,13 +329,15 @@ export function StudentTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
-                    onCheckedChange={handleSelectAll}
-                    disabled={loading}
-                  />
-                </TableHead>
+                {canManageRows ? (
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
+                      onCheckedChange={handleSelectAll}
+                      disabled={loading}
+                    />
+                  </TableHead>
+                ) : null}
                 <TableHead>Reg No</TableHead>
                 <TableHead>Name</TableHead>
                 {/* <TableHead>Father Name</TableHead>
@@ -339,7 +352,7 @@ export function StudentTable({
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={canManageRows ? 8 : 7} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                       <span className="text-muted-foreground">Loading students...</span>
@@ -348,7 +361,7 @@ export function StudentTable({
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={canManageRows ? 8 : 7} className="text-center py-8">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-muted-foreground text-lg">No students found</p>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -360,12 +373,14 @@ export function StudentTable({
               ) : (
                 filteredStudents.map((student) => (
                   <TableRow key={student._id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedStudents.includes(student._id)}
-                        onCheckedChange={(checked) => handleSelectStudent(student._id, checked as boolean)}
-                      />
-                    </TableCell>
+                    {canManageRows ? (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStudents.includes(student._id)}
+                          onCheckedChange={(checked) => handleSelectStudent(student._id, checked as boolean)}
+                        />
+                      </TableCell>
+                    ) : null}
                     <TableCell className="font-medium">{student.regNo}</TableCell>
                     <TableCell>{student.name}</TableCell>
                     {/* <TableCell>{student.fatherName || "-"}</TableCell>
@@ -390,20 +405,24 @@ export function StudentTable({
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/students/${student._id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeleteStudent(student._id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
+                          {canManageRows && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/students/${student._id}/edit`}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => handleDeleteStudent(student._id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

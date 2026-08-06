@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Check, Loader2, Search, UserRound } from "lucide-react";
+import { authHeaders } from "@/lib/api";
 
 const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://qtech-backend.vercel.app";
 const API_FEE = `${RAW_BASE.replace(/\/+$/, "")}/api/fee-records`;
@@ -78,7 +79,7 @@ export function FeePaymentForm({ onSuccess, preset }: FeePaymentFormProps) {
     async function load() {
       try {
         setLoadingClasses(true);
-        const res = await fetch(API_CLASSES, { cache: "no-store" });
+        const res = await fetch(API_CLASSES, { cache: "no-store", headers: authHeaders() });
         const json = await res.json();
         const list: any[] = Array.isArray(json) ? json : json?.data || [];
         const simplified: ClassLite[] = list.map((c: any) => ({ _id: c._id, name: c.name }));
@@ -101,7 +102,7 @@ export function FeePaymentForm({ onSuccess, preset }: FeePaymentFormProps) {
     async function load() {
       try {
         setLoadingStudents(true);
-        const res = await fetch(API_STUDENTS, { cache: "no-store" });
+        const res = await fetch(API_STUDENTS, { cache: "no-store", headers: authHeaders() });
         const json = await res.json();
         const list: any[] = Array.isArray(json) ? json : json?.data || [];
         if (!alive) return;

@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -62,7 +63,7 @@ export default function AttendanceRecordsPage() {
 
   // Fetch classes on mount
   useEffect(() => {
-    fetch(`${API_BASE}/api/classes`)
+    fetch(`${API_BASE}/api/classes`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => setClasses(json?.data || []))
       .catch((err) => console.error("Error fetching classes:", err));
@@ -81,7 +82,7 @@ export default function AttendanceRecordsPage() {
       // Note: For date range filtering, you might need to enhance your backend
       // For now, we'll fetch all and filter on frontend if needed
       
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders() });
       const json = await res.json();
 
       if (json.success) {

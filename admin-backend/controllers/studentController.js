@@ -2,6 +2,7 @@
 const mongoose = require("mongoose");
 const Student = require('../models/Student');
 const ClassModel = require('../models/Class');
+const UserModel = require('../models/User');
 const VALID_CATEGORIES = ["Free", "Paid"];
 const VALID_STATUS = ["Active", "Inactive", "Graduated"];
 const VALID_FEE_STATUS = ["Paid", "Unpaid", "Partial", "Overdue"];
@@ -12,10 +13,87 @@ function parseDateMaybe(d) {
   return isNaN(dt.getTime()) ? undefined : dt;
 }
 
+function toIdString(value) {
+  if (!value) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value === "object") return String(value._id || value.id || "");
+  return "";
+}
+
+async function getCurrentUser(req) {
+  if (!req.user?.id) return null;
+  return UserModel.findById(req.user.id)
+    .select("email role studentClass parentStudentIds assignedClasses assignedSubjects")
+    .lean();
+}
+
+async function getStudentScopeFilter(user) {
+  const role = user?.role;
+  if (!role || role === "superadmin" || role === "admin") return {};
+
+  if (role === "teacher") {
+    const classIds = Array.isArray(user.assignedClasses)
+      ? user.assignedClasses.map(toIdString).filter(Boolean)
+      : [];
+    return classIds.length ? { class: { $in: classIds } } : { _id: null };
+  }
+
+  if (role === "parent") {
+    const studentIds = Array.isArray(user.parentStudentIds)
+      ? user.parentStudentIds.map(toIdString).filter(Boolean)
+      : [];
+    return studentIds.length ? { _id: { $in: studentIds } } : { _id: null };
+  }
+
+  if (role === "student") {
+    return user.email ? { email: String(user.email).toLowerCase().trim() } : { _id: null };
+  }
+
+  return { _id: null };
+}
+
+function canAccessStudent(user, doc) {
+  const role = user?.role;
+  if (!role || role === "superadmin" || role === "admin") return true;
+
+  if (role === "teacher") {
+    const classIds = Array.isArray(user.assignedClasses)
+      ? user.assignedClasses.map(toIdString).filter(Boolean)
+      : [];
+    return classIds.includes(toIdString(doc.class));
+  }
+
+  if (role === "parent") {
+    const studentIds = Array.isArray(user.parentStudentIds)
+      ? user.parentStudentIds.map(toIdString).filter(Boolean)
+      : [];
+    return studentIds.includes(toIdString(doc._id));
+  }
+
+  if (role === "student") {
+    return String(doc.email || "").toLowerCase().trim() === String(user.email || "").toLowerCase().trim();
+  }
+
+  return false;
+}
+
+function teacherCanManageStudent(user, classId) {
+  if (!user || user.role !== "teacher") return true;
+  const classIds = Array.isArray(user.assignedClasses)
+    ? user.assignedClasses.map(toIdString).filter(Boolean)
+    : [];
+  return classIds.includes(toIdString(classId));
+}
+
 
 /** Create */
 async function createStudent(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     let {
       regNo,
       name,
@@ -72,6 +150,9 @@ async function createStudent(req, res) {
     if (!cls) {
       return res.status(404).json({ success: false, message: "Class not found" });
     }
+    if (!teacherCanManageStudent(currentUser, classId)) {
+      return res.status(403).json({ success: false, message: "You can only admit students in your assigned classes" });
+    }
 
     const doc = await Student.create({
       regNo,
@@ -111,8 +192,14 @@ async function createStudent(req, res) {
 // controllers/studentController.js
 async function getAllStudents(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const { q, classId, status, category, feeStatus } = req.query;
-    const filter = {};
+    const scopeFilter = await getStudentScopeFilter(currentUser);
+    const filter = { ...scopeFilter };
 
     // text search
     if (q && q.trim()) filter.$text = { $search: q.trim() };
@@ -160,12 +247,20 @@ module.exports = { getAllStudents };
 /** Read one */
 async function getStudentById(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ success: false, message: "Invalid student id" });
     }
     const doc = await Student.findById(id).populate("class", "name");
     if (!doc) return res.status(404).json({ success: false, message: "Student not found" });
+    if (!canAccessStudent(currentUser, doc)) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
     return res.status(200).json({ success: true, data: doc });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error", error: err.message });
@@ -174,9 +269,31 @@ async function getStudentById(req, res) {
 
 async function getStudentsByClass(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const { classId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(classId)) {
       return res.status(400).json({ success: false, message: "Invalid class id" });
+    }
+
+    if (!teacherCanManageStudent(currentUser, classId) && currentUser.role !== "superadmin" && currentUser.role !== "admin") {
+      if (currentUser.role === "student") {
+        const student = await Student.findOne({ email: String(currentUser.email || "").toLowerCase().trim() }).select("class").lean();
+        if (!student || toIdString(student.class) !== String(classId)) {
+          return res.status(403).json({ success: false, message: "Forbidden" });
+        }
+      } else if (currentUser.role === "parent") {
+        const parentStudents = await Student.find({ _id: { $in: currentUser.parentStudentIds || [] } }).select("class").lean();
+        const parentClassIds = new Set(parentStudents.map((student) => toIdString(student.class)));
+        if (!parentClassIds.has(String(classId))) {
+          return res.status(403).json({ success: false, message: "Forbidden" });
+        }
+      } else {
+        return res.status(403).json({ success: false, message: "Forbidden" });
+      }
     }
 
     // Ensure class exists (optional but nice)
@@ -245,11 +362,19 @@ async function getStudentsByClass(req, res) {
  */
 async function updateStudent(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
     const id = req.params.id;
     const payload = req.body;
 
     const doc = await Student.findById(id);
     if (!doc) return res.status(404).json({ success: false, message: 'Student not found' });
+    if (!canAccessStudent(currentUser, doc)) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
 
     const oldClassId = String(doc.class);
 
@@ -268,6 +393,10 @@ async function updateStudent(req, res) {
         }
       }
     });
+
+    if (!teacherCanManageStudent(currentUser, doc.class)) {
+      return res.status(403).json({ success: false, message: 'You can only update students in your assigned classes' });
+    }
 
     const saved = await doc.save();
 
@@ -292,6 +421,20 @@ async function updateStudent(req, res) {
 /** Delete */
 async function deleteStudent(req, res) {
   try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const existing = await Student.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Student not found' });
+    if (!canAccessStudent(currentUser, existing)) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+    if (!teacherCanManageStudent(currentUser, existing.class)) {
+      return res.status(403).json({ success: false, message: 'You can only delete students in your assigned classes' });
+    }
+
     const doc = await Student.findByIdAndDelete(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: 'Student not found' });
 

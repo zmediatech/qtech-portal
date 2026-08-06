@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"; // Utility classnames
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label"; // Ensure correct import path
 import { Badge } from "@/components/ui/badge"; // Ensure correct import path
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -38,7 +39,7 @@ export default function AttendanceMarkingPage() {
   // Fetch CLASSES
   // ------------------------
   useEffect(() => {
-    fetch(`${API_BASE}/api/classes`)
+    fetch(`${API_BASE}/api/classes`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => setClasses(json?.data || []))
       .catch((err) => console.error("Error fetching classes:", err));
@@ -53,7 +54,7 @@ export default function AttendanceMarkingPage() {
       return;
     }
 
-    fetch(`${API_BASE}/api/students/class/${selectedClass}`)
+    fetch(`${API_BASE}/api/students/class/${selectedClass}`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => setStudents(json?.data || []))
       .catch((err) => console.error("Error fetching students:", err));
@@ -67,7 +68,7 @@ export default function AttendanceMarkingPage() {
 
     const dateStr = selectedDate.toISOString().split("T")[0]; // Format the date to "YYYY-MM-DD"
 
-    fetch(`${API_BASE}/api/attendance?classId=${selectedClass}&date=${dateStr}`)
+    fetch(`${API_BASE}/api/attendance?classId=${selectedClass}&date=${dateStr}`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {

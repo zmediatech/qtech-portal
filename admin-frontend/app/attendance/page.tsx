@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/role-gate";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -38,7 +39,7 @@ export default function AttendanceMarkingPage() {
 
   // Fetch CLASSES
   useEffect(() => {
-    fetch(`${API_BASE}/api/classes`)
+    fetch(`${API_BASE}/api/classes`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => setClasses(json?.data || []))
       .catch((err) => console.error("Error fetching classes:", err));
@@ -52,7 +53,7 @@ export default function AttendanceMarkingPage() {
       return;
     }
 
-    fetch(`${API_BASE}/api/students/class/${selectedClass}`)
+    fetch(`${API_BASE}/api/students/class/${selectedClass}`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => {
         const studentData = json?.data || [];
@@ -78,7 +79,7 @@ export default function AttendanceMarkingPage() {
 
     const dateStr = selectedDate.toISOString().split("T")[0];
 
-    fetch(`${API_BASE}/api/attendance?classId=${selectedClass}&date=${dateStr}`)
+    fetch(`${API_BASE}/api/attendance?classId=${selectedClass}&date=${dateStr}`, { headers: authHeaders() })
       .then((res) => res.json())
       .then((json) => {
         console.log("Fetched attendance:", json); // Debug log

@@ -6,6 +6,7 @@ import { AdminLayout } from "@/components/admin-layout";
 import { StudentForm } from "@/components/student-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://qtech-backend.vercel.app";
 
@@ -58,9 +59,7 @@ export default function EditStudentPage({ params }: EditStudentPageProps) {
       try {
         setLoading(true);
         setErrMsg(null);
-        const res = await fetch(`${API_BASE}/api/students/${id}`, {
-          headers: { "Content-Type": "application/json" },
-        });
+        const res = await fetch(`${API_BASE}/api/students/${id}`, { headers: authHeaders() });
         const json = await res.json();
         if (!alive) return;
         if (!res.ok || !json?.success || !json?.data) {
@@ -105,7 +104,7 @@ export default function EditStudentPage({ params }: EditStudentPageProps) {
       setSaving(true);
       const res = await fetch(`${API_BASE}/api/students/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
       const json = await res.json();

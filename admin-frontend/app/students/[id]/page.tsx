@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { StudentForm } from "@/components/student-form";
 import { FeePaymentForm } from "@/components/fee-payment-form";
 import { toast } from "@/hooks/use-toast";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
@@ -119,12 +120,12 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
       setErrMsg(null);
       try {
         // Try ObjectId route
-        let res = await fetch(`${API_BASE}/api/students/${resolvedParams.id}`);
+        let res = await fetch(`${API_BASE}/api/students/${resolvedParams.id}`, { headers: authHeaders() });
         let json: ApiResponse<StudentDoc> = await res.json();
 
         // Fallback: search by regNo
         if (!res.ok || !json.success) {
-          res = await fetch(`${API_BASE}/api/students?q=${encodeURIComponent(resolvedParams.id)}&limit=1`);
+          res = await fetch(`${API_BASE}/api/students?q=${encodeURIComponent(resolvedParams.id)}&limit=1`, { headers: authHeaders() });
           const searchJson = await res.json();
 
           if (res.ok && searchJson?.success) {
@@ -168,7 +169,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
     async function loadFees() {
       setLoadingFees(true);
       try {
-        const res = await fetch(`${API_BASE}/api/fee-records?q=${encodeURIComponent(currentStudent.regNo)}`);
+        const res = await fetch(`${API_BASE}/api/fee-records?q=${encodeURIComponent(currentStudent.regNo)}`, { headers: authHeaders() });
         const json = await res.json();
 
         if (!alive) return;
@@ -245,6 +246,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
       // Cascade delete endpoint
       const res = await fetch(`${API_BASE}/api/students/${student._id}/cascade`, {
         method: "DELETE",
+        headers: authHeaders(),
       });
       const json: ApiResponse<unknown> = await res.json();
 
@@ -302,7 +304,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
     try {
       const res = await fetch(`${API_BASE}/api/students/${student._id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
       const json: ApiResponse<StudentDoc> = await res.json();
@@ -329,7 +331,7 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
     if (student) {
       (async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/fee-records?q=${encodeURIComponent(student.regNo)}`);
+          const res = await fetch(`${API_BASE}/api/fee-records?q=${encodeURIComponent(student.regNo)}`, { headers: authHeaders() });
           const json = await res.json();
           if (res.ok && json.items) {
             const studentFees = json.items.filter((fee: FeeRecord) => fee.regNo === student.regNo || fee.student === student._id);

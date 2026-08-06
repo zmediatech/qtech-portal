@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle } from "lucide-react";
+import { authHeaders } from "@/lib/api";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -69,7 +70,7 @@ export function MarksForm({
   useEffect(() => {
     const loadStudents = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/students`);
+        const res = await fetch(`${API_BASE}/api/students`, { headers: authHeaders() });
         const json = await res.json();
         setStudents(json.data || []);
       } catch {
@@ -86,11 +87,11 @@ export function MarksForm({
     const student = students.find((s) => s._id === studentId);
     if (!student) return;
 
-    fetch(`${API_BASE}/api/subjects?classId=${student.classId}`)
+    fetch(`${API_BASE}/api/subjects?classId=${student.classId}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((j) => setSubjects(j.data || []));
 
-    fetch(`${API_BASE}/api/exams?classId=${student.classId}`)
+    fetch(`${API_BASE}/api/exams?classId=${student.classId}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((j) => setExams(j.data || []));
   }, [studentId, students]);
