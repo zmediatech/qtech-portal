@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const Student = require('../models/Student');
 const ClassModel = require('../models/Class');
 const UserModel = require('../models/User');
+const CourseModel = require('../models/Course');
+const EnrollmentModel = require('../models/Enrollment');
 const VALID_CATEGORIES = ["Free", "Paid"];
 const VALID_STATUS = ["Active", "Inactive", "Graduated"];
 const VALID_FEE_STATUS = ["Paid", "Unpaid", "Partial", "Overdue"];
@@ -22,9 +24,45 @@ function toIdString(value) {
 
 async function getCurrentUser(req) {
   if (!req.user?.id) return null;
-  return UserModel.findById(req.user.id)
+  const user = await UserModel.findById(req.user.id)
     .select("email role studentClass parentStudentIds assignedClasses assignedSubjects")
     .lean();
+
+  if (!user) return null;
+
+  if (user.role === "teacher") {
+    const managedCourses = await CourseModel.find({ teacher: user._id }).select("_id classIds").lean();
+    const managedCourseIds = managedCourses.map((course) => course._id);
+    const managedClassIds = [
+      ...new Set(
+        [
+          ...(Array.isArray(user.assignedClasses) ? user.assignedClasses.map(toIdString) : []),
+          ...managedCourses.flatMap((course) => (Array.isArray(course.classIds) ? course.classIds : [])).map(toIdString),
+        ].filter(Boolean)
+      ),
+    ];
+    const managedStudentIds = managedCourseIds.length
+      ? [
+          ...new Set(
+            (
+              await EnrollmentModel.find({ course: { $in: managedCourseIds } })
+                .select("student")
+                .lean()
+            )
+              .map((enrollment) => toIdString(enrollment.student))
+              .filter(Boolean)
+          ),
+        ]
+      : [];
+
+    return {
+      ...user,
+      managedClassIds,
+      managedStudentIds,
+    };
+  }
+
+  return user;
 }
 
 async function getStudentScopeFilter(user) {
@@ -32,9 +70,16 @@ async function getStudentScopeFilter(user) {
   if (!role || role === "superadmin" || role === "admin") return {};
 
   if (role === "teacher") {
-    const classIds = Array.isArray(user.assignedClasses)
-      ? user.assignedClasses.map(toIdString).filter(Boolean)
+    const studentIds = Array.isArray(user.managedStudentIds)
+      ? user.managedStudentIds.map(toIdString).filter(Boolean)
       : [];
+    if (studentIds.length) return { _id: { $in: studentIds } };
+
+    const classIds = Array.isArray(user.managedClassIds)
+      ? user.managedClassIds.map(toIdString).filter(Boolean)
+      : Array.isArray(user.assignedClasses)
+        ? user.assignedClasses.map(toIdString).filter(Boolean)
+        : [];
     return classIds.length ? { class: { $in: classIds } } : { _id: null };
   }
 
@@ -57,9 +102,16 @@ function canAccessStudent(user, doc) {
   if (!role || role === "superadmin" || role === "admin") return true;
 
   if (role === "teacher") {
-    const classIds = Array.isArray(user.assignedClasses)
-      ? user.assignedClasses.map(toIdString).filter(Boolean)
+    const studentIds = Array.isArray(user.managedStudentIds)
+      ? user.managedStudentIds.map(toIdString).filter(Boolean)
       : [];
+    if (studentIds.length) return studentIds.includes(toIdString(doc._id));
+
+    const classIds = Array.isArray(user.managedClassIds)
+      ? user.managedClassIds.map(toIdString).filter(Boolean)
+      : Array.isArray(user.assignedClasses)
+        ? user.assignedClasses.map(toIdString).filter(Boolean)
+        : [];
     return classIds.includes(toIdString(doc.class));
   }
 
@@ -79,9 +131,11 @@ function canAccessStudent(user, doc) {
 
 function teacherCanManageStudent(user, classId) {
   if (!user || user.role !== "teacher") return true;
-  const classIds = Array.isArray(user.assignedClasses)
-    ? user.assignedClasses.map(toIdString).filter(Boolean)
-    : [];
+  const classIds = Array.isArray(user.managedClassIds)
+    ? user.managedClassIds.map(toIdString).filter(Boolean)
+    : Array.isArray(user.assignedClasses)
+      ? user.assignedClasses.map(toIdString).filter(Boolean)
+      : [];
   return classIds.includes(toIdString(classId));
 }
 

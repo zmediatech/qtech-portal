@@ -101,7 +101,7 @@ export function StudentTable({
         params.append("feeStatus", feeStatusFilter)
       }
 
-      const url = apiUrl(`/students${params.toString() ? `?${params.toString()}` : ''}`)
+      const url = apiUrl(`/api/students${params.toString() ? `?${params.toString()}` : ''}`)
       const response = await fetch(url, { headers: authHeaders() })
       if (!response.ok) throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
       
@@ -124,7 +124,7 @@ export function StudentTable({
   const handleDeleteStudent = async (studentId: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return
     try {
-      const response = await fetch(apiUrl(`/students/${studentId}`), { method: 'DELETE', headers: authHeaders() })
+      const response = await fetch(apiUrl(`/api/students/${studentId}`), { method: 'DELETE', headers: authHeaders() })
       const result = await response.json()
       if (response.ok && result.success) {
         setStudents(prev => prev.filter(s => s._id !== studentId))
