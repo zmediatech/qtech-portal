@@ -68,12 +68,11 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
   const [error, setError] = useState<string | null>(null);
 
   const normalizedRole = normalizeRole(role || user?.role);
-  const isAdmin = normalizedRole === "admin";
+  const isSuperAdmin = normalizedRole === "superadmin";
+  const isAdmin = normalizedRole === "admin" || isSuperAdmin;
   const isTeacher = normalizedRole === "teacher";
   const isParent = normalizedRole === "parent";
   const isStudent = normalizedRole === "student";
-  const isSuperAdmin =
-    isAdmin && String(user?.email || "").toLowerCase() === "superadmin@gmail.com";
 
   useEffect(() => {
     setUser(getStoredUser());
@@ -177,7 +176,9 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
   const assignedSubjects = (user?.assignedSubjects || []).map(label);
   const childClass = label(user?.studentClass);
 
-  const title = isAdmin
+  const title = isSuperAdmin
+    ? "Super Admin Control Center"
+    : isAdmin
     ? "Admin Workspace"
     : isTeacher
       ? "Teacher Workspace"
@@ -185,8 +186,10 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
         ? "Parent Workspace"
         : "Student Workspace";
 
-  const subtitle = isAdmin
-    ? "Create users, assign roles, manage schedules, and control LMS content."
+  const subtitle = isSuperAdmin
+    ? "Full portal control with user management, reporting, schedules, LMS, fees, and records."
+    : isAdmin
+      ? "Create users, assign roles, manage schedules, and control LMS content."
     : isTeacher
       ? "See assigned classes and author classwise or subjectwise courses."
       : isParent
@@ -221,7 +224,7 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
         <div className="flex flex-col gap-4 rounded-3xl border bg-gradient-to-br from-emerald-50 via-white to-cyan-50 p-4 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="rounded-full bg-emerald-600 px-3 py-1 text-white capitalize">{isSuperAdmin ? "superadmin" : normalizedRole}</Badge>
+              <Badge className="rounded-full bg-emerald-600 px-3 py-1 text-white capitalize">{normalizedRole}</Badge>
               <Badge variant="outline" className="rounded-full">{user?.email}</Badge>
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>

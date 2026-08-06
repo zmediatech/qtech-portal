@@ -4,6 +4,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const connectDB = require('../config/db');
 
+function normalizeRole(role) {
+  if (role === 'superadmin' || role === 'admin' || role === 'teacher' || role === 'student' || role === 'parent') {
+    return role;
+  }
+  return 'student';
+}
+
+function canManageSuperadmin(role) {
+  return normalizeRole(role) === 'superadmin';
+}
+
 const getAllUsers = async (_req, res) => {
   try {
     const users = await UserModel.find().select('-password');
@@ -28,7 +39,7 @@ const createUser = async (req, res) => {
     const body = req.body || {};
     const name = body.name;
     const password = body.password;
-    const role = String(body.role || "student").toLowerCase();
+    const role = normalizeRole(String(body.role || "student").toLowerCase());
     const email = String(body.email || "").toLowerCase().trim();
     const studentClass = body.studentClass || null;
     const parentStudentIds = Array.isArray(body.parentStudentIds) ? body.parentStudentIds : [];
@@ -44,6 +55,9 @@ const createUser = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, message: 'User already exists with this email' });
 
     const hashed = await bcrypt.hash(password, 10);
+    if (role === 'superadmin' && !canManageSuperadmin(req.user?.role)) {
+      return res.status(403).json({ success: false, message: 'Only superadmin can create superadmin accounts' });
+    }
     const user = await UserModel.create({
       name,
       email,
@@ -77,12 +91,17 @@ const updateUser = async (req, res) => {
       if (exists) return res.status(400).json({ success: false, message: 'Email already exists' });
     }
 
+    const nextRole = normalizeRole(String(role || user.role).toLowerCase());
+    if (nextRole === 'superadmin' && !canManageSuperadmin(req.user?.role)) {
+      return res.status(403).json({ success: false, message: 'Only superadmin can assign superadmin role' });
+    }
+
     const updated = await UserModel.findByIdAndUpdate(
       userId,
       {
         name,
         email,
-        role,
+        role: nextRole,
         studentClass,
         parentStudentIds,
         assignedClasses,
@@ -200,7 +219,7 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.params.id;
     const requesterId = req.user?.id || req.user?._id;
-    if (String(requesterId) !== String(userId) && req.user?.role !== 'admin') {
+    if (String(requesterId) !== String(userId) && !['admin', 'superadmin'].includes(req.user?.role)) {
       return res.status(403).json({ success: false, message: 'You can only change your own password' });
     }
 

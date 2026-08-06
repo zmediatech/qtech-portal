@@ -6,6 +6,10 @@ function requireRole(...allowedRoles) {
       return res.status(403).json({ success: false, message: 'Role is required.' });
     }
 
+    if (role === 'superadmin') {
+      return next();
+    }
+
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }

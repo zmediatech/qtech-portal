@@ -31,7 +31,7 @@ type NavItem = {
   href?: string;
   icon: React.ElementType;
   children?: { name: string; href: string }[];
-  roles?: Array<"admin" | "teacher" | "student" | "parent">;
+  roles?: Array<"superadmin" | "admin" | "teacher" | "student" | "parent">;
 };
 
 const navigation: NavItem[] = [
@@ -113,7 +113,7 @@ export function AdminSidebar({
   setMobileOpen,
 }: SidebarProps) {
   const pathname = usePathname();
-  const [role, setRole] = useState<"admin" | "teacher" | "student" | "parent" | undefined>();
+  const [role, setRole] = useState<"superadmin" | "admin" | "teacher" | "student" | "parent" | undefined>();
   const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export function AdminSidebar({
   }, []);
 
   const visibleNavigation = useMemo(
-    () => navigation.filter((item) => !item.roles || !role || item.roles.includes(role)),
+    () => navigation.filter((item) => !item.roles || !role || role === "superadmin" || item.roles.includes(role)),
     [role]
   );
   const dashboardHref = getRoleHomePath(role);

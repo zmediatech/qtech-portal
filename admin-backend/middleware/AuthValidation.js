@@ -7,7 +7,7 @@ const signupValidation = [
   body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 chars"),
   body("role")
     .optional()
-    .isIn(["admin", "teacher", "student", "parent"])
+    .isIn(["superadmin", "admin", "teacher", "student", "parent"])
     .withMessage("Invalid role"),
   (req, res, next) => {
     const errors = validationResult(req);

@@ -13,9 +13,13 @@ function resolveId(value) {
   return String(value);
 }
 
+function isAdminLike(role) {
+  return role === 'admin' || role === 'superadmin';
+}
+
 function hasAccessToCourse(user, course) {
   if (!user || !course) return false;
-  if (user.role === 'admin') return true;
+  if (isAdminLike(user.role)) return true;
   const teacherId = resolveId(course.teacher);
   const courseClasses = (course.classIds || []).map(resolveId).filter(Boolean);
   const courseSubjects = (course.subjectIds || []).map(resolveId).filter(Boolean);
@@ -76,7 +80,7 @@ async function getLearnerScope(user) {
 
 async function buildAudienceFilter(user) {
   if (!user) return {};
-  if (user.role === 'admin') return {};
+  if (isAdminLike(user.role)) return {};
   if (user.role === 'teacher') {
     return {
       $or: [
@@ -179,7 +183,7 @@ async function createCourse(req, res) {
   try {
     const user = await User.findById(req.user.id).lean();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (!['admin', 'teacher'].includes(user.role)) {
+    if (!isAdminLike(user.role) && user.role !== 'teacher') {
       return res.status(403).json({ success: false, message: 'Only admins and teachers can create courses' });
     }
 
@@ -227,7 +231,7 @@ async function updateCourse(req, res) {
 
     const user = await User.findById(req.user.id).lean();
   if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (user.role !== 'admin' && resolveId(course.teacher) !== String(user._id)) {
+    if (!isAdminLike(user.role) && resolveId(course.teacher) !== String(user._id)) {
       return res.status(403).json({ success: false, message: 'Not allowed to update this course' });
     }
 
@@ -257,7 +261,7 @@ async function deleteCourse(req, res) {
 
     const user = await User.findById(req.user.id).lean();
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    if (user.role !== 'admin' && resolveId(course.teacher) !== String(user._id)) {
+    if (!isAdminLike(user.role) && resolveId(course.teacher) !== String(user._id)) {
       return res.status(403).json({ success: false, message: 'Not allowed to delete this course' });
     }
 
@@ -328,7 +332,7 @@ async function addLecture(req, res) {
     if (!user || !course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    if (user.role !== 'admin' && resolveId(course.teacher) !== String(user._id)) {
+    if (!isAdminLike(user.role) && resolveId(course.teacher) !== String(user._id)) {
       return res.status(403).json({ success: false, message: 'Not allowed to add lectures to this course' });
     }
 
@@ -387,7 +391,7 @@ async function enrollInCourse(req, res) {
         course: course._id,
         user: user._id,
         enrolledBy: user._id,
-        source: user.role === 'admin' ? 'manual' : 'self',
+        source: isAdminLike(user.role) ? 'manual' : 'self',
         status: 'active',
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }

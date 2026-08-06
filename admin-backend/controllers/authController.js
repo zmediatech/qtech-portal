@@ -8,12 +8,18 @@ const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "superadmin@gmail.com")
   .toLowerCase()
   .trim();
 
+function normalizeRole(role) {
+  if (role === "superadmin" || role === "admin" || role === "teacher" || role === "student" || role === "parent") {
+    return role;
+  }
+  return "student";
+}
+
 const signup = async (req, res) => {
   try {
     const body = req.body || {};
     const name = body.name;
     const password = body.password;
-    const role = String(body.role || "student").toLowerCase();
     const email = String(body.email || "").toLowerCase().trim();
     const studentClass = body.studentClass || null;
     const parentStudentIds = Array.isArray(body.parentStudentIds) ? body.parentStudentIds : [];
@@ -32,7 +38,7 @@ const signup = async (req, res) => {
       name,
       email,
       password: hashed,
-      role,
+      role: "student",
       studentClass,
       parentStudentIds,
       assignedClasses,
@@ -68,8 +74,10 @@ const login = async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(403).json({ message: errorMsg, success: false });
 
-    const normalizedRole =
-      user.role || (email === ADMIN_EMAIL ? "admin" : "student");
+    let normalizedRole = normalizeRole(user.role);
+    if (email === ADMIN_EMAIL) {
+      normalizedRole = "superadmin";
+    }
 
     if (user.role !== normalizedRole) {
       await UserModel.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });

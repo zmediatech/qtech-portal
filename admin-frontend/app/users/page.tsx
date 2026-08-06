@@ -18,14 +18,14 @@ type UserRow = {
   _id: string;
   name: string;
   email: string;
-  role?: "admin" | "teacher" | "student" | "parent";
+  role?: "superadmin" | "admin" | "teacher" | "student" | "parent";
   studentClass?: string | SimpleItem | null;
   parentStudentIds?: Array<string | SimpleItem>;
   assignedClasses?: Array<string | SimpleItem>;
   assignedSubjects?: Array<string | SimpleItem>;
 };
 
-const ROLES = ["admin", "teacher", "student", "parent"] as const;
+const ROLES = ["superadmin", "admin", "teacher", "student", "parent"] as const;
 
 function asArray<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) return payload as T[];
@@ -63,10 +63,16 @@ export default function UsersPage() {
     assignedSubjects: [] as string[],
   });
 
-  const selectedUser = useMemo(() => users.find((user) => user._id === selectedUserId) || null, [users, selectedUserId]);
+  const canManageSuperadmin = stored?.role === "superadmin";
+  const availableRoles = canManageSuperadmin ? ROLES : ROLES.filter((role) => role !== "superadmin");
+  const visibleUsers = useMemo(
+    () => (canManageSuperadmin ? users : users.filter((user) => user.role !== "superadmin")),
+    [canManageSuperadmin, users]
+  );
+  const selectedUser = useMemo(() => visibleUsers.find((user) => user._id === selectedUserId) || null, [visibleUsers, selectedUserId]);
 
   useEffect(() => {
-    if (stored?.role !== "admin") {
+    if (stored?.role !== "admin" && stored?.role !== "superadmin") {
       window.location.href = "/dashboard";
     }
   }, [stored]);
@@ -92,11 +98,13 @@ export default function UsersPage() {
 
         if (!alive) return;
 
-        setUsers(asArray<UserRow>(usersJson));
+        const nextUsers = asArray<UserRow>(usersJson);
+        setUsers(nextUsers);
         setClasses(asArray<SimpleItem>(classesJson));
         setSubjects(asArray<SimpleItem>(subjectsJson));
         setStudents(asArray<SimpleItem>(studentsJson));
-        setSelectedUserId((current) => current ?? asArray<UserRow>(usersJson)[0]?._id ?? null);
+        const nextVisibleUsers = canManageSuperadmin ? nextUsers : nextUsers.filter((user) => user.role !== "superadmin");
+        setSelectedUserId((current) => current ?? nextVisibleUsers[0]?._id ?? null);
       } catch (err: any) {
         if (!alive) return;
         setError(err?.message || "Unable to load users");
@@ -121,6 +129,20 @@ export default function UsersPage() {
       parentStudentIds: toIdList(selectedUser.parentStudentIds),
       assignedClasses: toIdList(selectedUser.assignedClasses),
       assignedSubjects: toIdList(selectedUser.assignedSubjects),
+    });
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (selectedUser) return;
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "student",
+      studentClass: "",
+      parentStudentIds: [],
+      assignedClasses: [],
+      assignedSubjects: [],
     });
   }, [selectedUser]);
 
@@ -265,7 +287,7 @@ export default function UsersPage() {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ROLES.map((role) => (
+                        {availableRoles.map((role) => (
                           <SelectItem key={role} value={role}>
                             {role}
                           </SelectItem>
@@ -382,7 +404,7 @@ export default function UsersPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-3">
-                {users.map((userRow) => (
+                {visibleUsers.map((userRow) => (
                   <div key={userRow._id} className={`rounded-2xl border p-4 ${selectedUserId === userRow._id ? "border-emerald-500 bg-emerald-50" : "bg-white"}`}>
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <button type="button" className="text-left" onClick={() => setSelectedUserId(userRow._id)}>

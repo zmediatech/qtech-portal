@@ -2,7 +2,7 @@ export type SessionUser = {
   id: string;
   email: string;
   name: string;
-  role?: "admin" | "teacher" | "student" | "parent";
+  role?: "superadmin" | "admin" | "teacher" | "student" | "parent";
   studentClass?: string | { _id?: string; name?: string } | null;
   parentStudentIds?: string[];
   assignedClasses?: Array<string | { _id?: string; name?: string }>;
@@ -11,10 +11,10 @@ export type SessionUser = {
   rightSignatureDataUrl?: string;
 };
 
-export type SessionRole = "admin" | "teacher" | "student" | "parent";
+export type SessionRole = "superadmin" | "admin" | "teacher" | "student" | "parent";
 
 export function normalizeRole(role?: string | null): SessionRole {
-  if (role === "admin" || role === "teacher" || role === "student" || role === "parent") {
+  if (role === "superadmin" || role === "admin" || role === "teacher" || role === "student" || role === "parent") {
     return role;
   }
   return "student";
@@ -22,6 +22,8 @@ export function normalizeRole(role?: string | null): SessionRole {
 
 export function getRoleHomePath(role?: string | null) {
   switch (normalizeRole(role)) {
+    case "superadmin":
+      return "/superadmin/dashboard";
     case "admin":
       return "/admin/dashboard";
     case "teacher":

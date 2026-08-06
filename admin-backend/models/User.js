@@ -1,7 +1,7 @@
 // models/User.js
 const mongoose = require('mongoose');
 
-const UserRoles = ['admin', 'teacher', 'student', 'parent'];
+const UserRoles = ['superadmin', 'admin', 'teacher', 'student', 'parent'];
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
