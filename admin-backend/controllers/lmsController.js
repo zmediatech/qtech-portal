@@ -3,6 +3,7 @@ const Course = require('../models/Course');
 const Lecture = require('../models/Lecture');
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
+const ClassModel = require('../models/Class');
 const Student = require('../models/Student');
 
 function resolveId(value) {
@@ -45,6 +46,34 @@ function hasAccessToCourse(user, course) {
   return false;
 }
 
+async function getLearnerScope(user) {
+  if (!user) return { classIds: [], subjectIds: [] };
+
+  if (user.role === 'student') {
+    if (!user.studentClass) return { classIds: [], subjectIds: [] };
+    const classDoc = await ClassModel.findById(user.studentClass).select('subjects').lean();
+    return {
+      classIds: [resolveId(user.studentClass)].filter(Boolean),
+      subjectIds: (classDoc?.subjects || []).map(resolveId).filter(Boolean),
+    };
+  }
+
+  if (user.role === 'parent') {
+    const studentIds = Array.isArray(user.parentStudentIds) ? user.parentStudentIds : [];
+    if (!studentIds.length) return { classIds: [], subjectIds: [] };
+
+    const students = await Student.find({ _id: { $in: studentIds } }).select('class').lean();
+    const classIds = [...new Set(students.map((s) => resolveId(s.class)).filter(Boolean))];
+    if (!classIds.length) return { classIds: [], subjectIds: [] };
+
+    const classes = await ClassModel.find({ _id: { $in: classIds } }).select('subjects').lean();
+    const subjectIds = [...new Set(classes.flatMap((c) => (c.subjects || []).map(resolveId)).filter(Boolean))];
+    return { classIds, subjectIds };
+  }
+
+  return { classIds: [], subjectIds: [] };
+}
+
 async function buildAudienceFilter(user) {
   if (!user) return {};
   if (user.role === 'admin') return {};
@@ -58,15 +87,24 @@ async function buildAudienceFilter(user) {
     };
   }
   if (user.role === 'student') {
+    const scope = await getLearnerScope(user);
     return {
       $or: [
         { scopeType: 'general' },
-        ...(user.studentClass ? [{ classIds: user.studentClass }] : []),
+        ...(scope.classIds.length ? [{ classIds: { $in: scope.classIds } }] : []),
+        ...(scope.subjectIds.length ? [{ scopeType: 'subjectwise', subjectIds: { $in: scope.subjectIds } }] : []),
       ],
     };
   }
   if (user.role === 'parent') {
-    return { $or: [{ scopeType: 'general' }] };
+    const scope = await getLearnerScope(user);
+    return {
+      $or: [
+        { scopeType: 'general' },
+        ...(scope.classIds.length ? [{ classIds: { $in: scope.classIds } }] : []),
+        ...(scope.subjectIds.length ? [{ scopeType: 'subjectwise', subjectIds: { $in: scope.subjectIds } }] : []),
+      ],
+    };
   }
   return {};
 }
@@ -244,7 +282,26 @@ async function getCourseById(req, res) {
     if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
 
     const user = await User.findById(req.user.id).lean();
-    if (!user || !hasAccessToCourse(user, course)) {
+    if (!user) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    if (user.role === 'student' || user.role === 'parent') {
+      const scope = await getLearnerScope(user);
+      const courseClassIds = (course.classIds || []).map(resolveId).filter(Boolean);
+      const courseSubjectIds = (course.subjectIds || []).map(resolveId).filter(Boolean);
+      const classMatch = courseClassIds.some((id) => scope.classIds.includes(id));
+      const subjectMatch = courseSubjectIds.some((id) => scope.subjectIds.includes(id));
+      const allowed =
+        course.scopeType === 'general' ||
+        (course.scopeType === 'classwise' && classMatch) ||
+        (course.scopeType === 'subjectwise' && subjectMatch) ||
+        (course.scopeType === 'both' && (classMatch || subjectMatch));
+
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+    } else if (!hasAccessToCourse(user, course)) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
@@ -305,7 +362,22 @@ async function enrollInCourse(req, res) {
     const user = await User.findById(req.user.id);
     const course = await Course.findById(req.params.courseId);
     if (!user || !course) return res.status(404).json({ success: false, message: 'Course not found' });
-    if (!hasAccessToCourse(user, course)) {
+    if (user.role === 'student' || user.role === 'parent') {
+      const scope = await getLearnerScope(user);
+      const courseClassIds = (course.classIds || []).map(resolveId).filter(Boolean);
+      const courseSubjectIds = (course.subjectIds || []).map(resolveId).filter(Boolean);
+      const classMatch = courseClassIds.some((id) => scope.classIds.includes(id));
+      const subjectMatch = courseSubjectIds.some((id) => scope.subjectIds.includes(id));
+      const allowed =
+        course.scopeType === 'general' ||
+        (course.scopeType === 'classwise' && classMatch) ||
+        (course.scopeType === 'subjectwise' && subjectMatch) ||
+        (course.scopeType === 'both' && (classMatch || subjectMatch));
+
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'Course is not available to this user' });
+      }
+    } else if (!hasAccessToCourse(user, course)) {
       return res.status(403).json({ success: false, message: 'Course is not available to this user' });
     }
 
@@ -354,7 +426,22 @@ async function listLectureByCourse(req, res) {
     const user = await User.findById(req.user.id).lean();
     const course = await Course.findById(req.params.courseId).lean();
     if (!user || !course) return res.status(404).json({ success: false, message: 'Course not found' });
-    if (!hasAccessToCourse(user, course)) {
+    if (user.role === 'student' || user.role === 'parent') {
+      const scope = await getLearnerScope(user);
+      const courseClassIds = (course.classIds || []).map(resolveId).filter(Boolean);
+      const courseSubjectIds = (course.subjectIds || []).map(resolveId).filter(Boolean);
+      const classMatch = courseClassIds.some((id) => scope.classIds.includes(id));
+      const subjectMatch = courseSubjectIds.some((id) => scope.subjectIds.includes(id));
+      const allowed =
+        course.scopeType === 'general' ||
+        (course.scopeType === 'classwise' && classMatch) ||
+        (course.scopeType === 'subjectwise' && subjectMatch) ||
+        (course.scopeType === 'both' && (classMatch || subjectMatch));
+
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+    } else if (!hasAccessToCourse(user, course)) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
