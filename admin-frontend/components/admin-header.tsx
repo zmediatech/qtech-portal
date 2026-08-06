@@ -65,7 +65,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   }
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b bg-background px-3 lg:h-[60px] lg:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur lg:h-[60px] lg:px-6">
       <Button
         variant="outline"
         size="icon"

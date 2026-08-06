@@ -36,7 +36,7 @@ export function AdminLayout({ children, initialCollapsed = false }: AdminLayoutP
 
   return (
     <div
-      className="flex min-h-screen w-full flex-col lg:grid"
+      className="flex h-dvh min-h-dvh w-full flex-col overflow-hidden lg:grid"
       style={{ gridTemplateColumns: isCollapsed ? "64px 1fr" : "280px 1fr" }}
     >
       <AdminSidebar
@@ -45,9 +45,9 @@ export function AdminLayout({ children, initialCollapsed = false }: AdminLayoutP
         mobileOpen={mobileSidebarOpen}
         setMobileOpen={setMobileSidebarOpen}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AdminHeader onMenuClick={() => setMobileSidebarOpen(true)} />
-        <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-auto p-3 sm:p-4 lg:gap-6 lg:p-6">
+        <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:gap-6 lg:p-6">
           {children}
         </main>
       </div>

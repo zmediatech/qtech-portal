@@ -248,7 +248,7 @@ export function AdminSidebar({
     <>
       <div
         className={cn(
-          "relative hidden border-r bg-sidebar transition-all duration-300 lg:block",
+          "relative hidden h-dvh overflow-hidden border-r bg-sidebar transition-all duration-300 lg:block",
           isCollapsed ? "w-16" : "w-64",
           className,
         )}
@@ -268,7 +268,7 @@ export function AdminSidebar({
       </div>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="flex flex-col bg-sidebar p-0">
+        <SheetContent side="left" className="flex h-dvh flex-col overflow-hidden bg-sidebar p-0">
           <SidebarContent />
         </SheetContent>
       </Sheet>
