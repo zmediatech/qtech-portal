@@ -1,353 +1,326 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { AdminLayout } from "@/components/admin-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Download, Filter, DollarSign } from "lucide-react"
-import { getStoredUser } from "@/lib/session"
-import { RoleGate } from "@/components/role-gate"
+import { useEffect, useMemo, useState } from "react";
+import { AdminLayout } from "@/components/admin-layout";
+import { RoleGate } from "@/components/role-gate";
+import { apiUrl, authHeaders } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowUpRight, Download, RefreshCw, Users2, BookOpen, Receipt, Clock3, ShieldCheck } from "lucide-react";
 
-const financeData = [
-  { month: "January 2024", fees: 45000, expenses: 28000, profit: 17000 },
-  { month: "February 2024", fees: 48000, expenses: 30000, profit: 18000 },
-  { month: "March 2024", fees: 52000, expenses: 32000, profit: 20000 },
-]
+type ReportSummary = {
+  counts: Record<string, number>;
+  studentBreakdown: Array<{ name: string; value: number }>;
+  incomeExpense: Array<{ month: string; income: number; expenses: number }>;
+  recentCourses: Array<{
+    _id: string;
+    title: string;
+    scopeType?: string;
+    teacher?: { name?: string; email?: string };
+    classIds?: Array<{ _id: string; name?: string }>;
+    subjectIds?: Array<{ _id: string; name?: string; code?: string }>;
+  }>;
+  recentLogs: Array<{
+    _id: string;
+    action: string;
+    actorEmail?: string;
+    actorRole?: string;
+    target?: string;
+    createdAt?: string;
+  }>;
+  attendance: {
+    overallAttendance: number;
+    present: number;
+    absent: number;
+    late: number;
+    total: number;
+  };
+};
 
-const studentReports = [
-  { category: "Active Students", count: 1180, percentage: 95.6 },
-  { category: "Inactive Students", count: 54, percentage: 4.4 },
-  { category: "Paid Students", count: 850, percentage: 72.0 },
-  { category: "Unpaid Students", count: 330, percentage: 28.0 },
-]
-
-const courseReports = [
-  { course: "Mathematics Advanced", enrolled: 45, completed: 38, completion: 84 },
-  { course: "Physics Fundamentals", enrolled: 52, completed: 41, completion: 79 },
-  { course: "English Literature", enrolled: 38, completed: 35, completion: 92 },
-]
-
-const examReports = [
-  { exam: "Mid-term Mathematics", class: "Grade 10-A", average: 78, highest: 95, lowest: 45 },
-  { exam: "Physics Quiz", class: "Grade 11-A", average: 82, highest: 98, lowest: 52 },
-  { exam: "English Essay", class: "Grade 9-A", average: 85, highest: 96, lowest: 68 },
-]
+const STAT_CARDS = [
+  { key: "students", label: "Students", icon: Users2 },
+  { key: "courses", label: "Courses", icon: BookOpen },
+  { key: "feeRecords", label: "Fee Records", icon: Receipt },
+  { key: "auditLogs", label: "Audit Logs", icon: ShieldCheck },
+];
 
 export default function ReportsPage() {
-  useEffect(() => {
-    const user = getStoredUser()
-    if (user?.role !== "superadmin") {
-      window.location.href = "/dashboard"
+  const [months, setMonths] = useState("6");
+  const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadSummary = async () => {
+    setError(null);
+    setRefreshing(true);
+    try {
+      const res = await fetch(apiUrl(`/api/reports/summary?months=${encodeURIComponent(months)}`), {
+        headers: authHeaders(),
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || "Failed to load report summary");
+      }
+      setSummary(json.data as ReportSummary);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load report summary");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [])
+  };
+
+  useEffect(() => {
+    loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [months]);
+
+  const topMetrics = useMemo(() => {
+    if (!summary) return [];
+    return STAT_CARDS.map((card) => ({
+      ...card,
+      value: summary.counts?.[card.key] ?? 0,
+    }));
+  }, [summary]);
 
   return (
     <RoleGate allowedRoles={["superadmin"]} message="Reports are reserved for superadmin.">
       <AdminLayout>
-        <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Reports & Analytics</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-            <Download className="h-4 w-4" />
-            Export All
-          </Button>
+        <div className="space-y-6">
+          <div className="rounded-3xl border bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-800 p-5 text-white sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <ArrowUpRight className="h-4 w-4" />
+                  Superadmin Reporting
+                </div>
+                <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Reports & Analytics</h1>
+                <p className="mt-2 max-w-3xl text-sm text-white/75">
+                  Live summary of students, courses, finance, attendance, and recent system activity.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge className="rounded-full bg-white/10 px-3 py-1 text-white">
+                  <Clock3 className="mr-2 h-4 w-4" />
+                  Last {months} months
+                </Badge>
+                <Button onClick={loadSummary} variant="secondary" className="rounded-full bg-white text-slate-900 hover:bg-slate-100">
+                  <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Report Filters</CardTitle>
+              <CardDescription>Control how much history is shown in the financial report.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-2 max-w-xs">
+                <Label>Months</Label>
+                <Select value={months} onValueChange={setMonths}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">Last 3 months</SelectItem>
+                    <SelectItem value="6">Last 6 months</SelectItem>
+                    <SelectItem value="12">Last 12 months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" className="bg-transparent" onClick={loadSummary}>
+                <Download className="mr-2 h-4 w-4" />
+                Export-ready data
+              </Button>
+            </CardContent>
+          </Card>
+
+          {error && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="py-4 text-sm text-red-700">{error}</CardContent>
+            </Card>
+          )}
+
+          {loading && !summary ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">Loading report summary...</CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {topMetrics.map((metric) => (
+                  <Card key={metric.key}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{metric.label}</CardTitle>
+                      <metric.icon className="h-4 w-4 text-emerald-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{metric.value.toLocaleString()}</div>
+                      <p className="text-xs text-muted-foreground">Live portal count</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Financial Trend</CardTitle>
+                    <CardDescription>Income vs expenses over the selected period.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(summary?.incomeExpense || []).map((row) => (
+                      <div key={row.month} className="rounded-2xl border p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="font-medium">{row.month}</div>
+                          <Badge variant={row.income >= row.expenses ? "default" : "secondary"} className="rounded-full">
+                            Net {(row.income - row.expenses).toLocaleString()}
+                          </Badge>
+                        </div>
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <div className="rounded-xl bg-emerald-50 p-3">
+                            <div className="text-xs uppercase text-emerald-700">Income</div>
+                            <div className="text-lg font-semibold text-emerald-900">{row.income.toLocaleString()}</div>
+                          </div>
+                          <div className="rounded-xl bg-rose-50 p-3">
+                            <div className="text-xs uppercase text-rose-700">Expenses</div>
+                            <div className="text-lg font-semibold text-rose-900">{row.expenses.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Attendance Snapshot</CardTitle>
+                    <CardDescription>Overall attendance calculated from live records.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-2xl border bg-slate-50 p-4 text-center">
+                      <div className="text-4xl font-bold text-emerald-700">{summary?.attendance.overallAttendance ?? 0}%</div>
+                      <div className="text-sm text-muted-foreground">Overall attendance</div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border p-3 text-center">
+                        <div className="text-2xl font-bold text-emerald-700">{summary?.attendance.present ?? 0}</div>
+                        <div className="text-xs text-muted-foreground">Present</div>
+                      </div>
+                      <div className="rounded-2xl border p-3 text-center">
+                        <div className="text-2xl font-bold text-amber-600">{summary?.attendance.late ?? 0}</div>
+                        <div className="text-xs text-muted-foreground">Late</div>
+                      </div>
+                      <div className="rounded-2xl border p-3 text-center">
+                        <div className="text-2xl font-bold text-rose-600">{summary?.attendance.absent ?? 0}</div>
+                        <div className="text-xs text-muted-foreground">Absent</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Tabs defaultValue="students" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="students">Students</TabsTrigger>
+                  <TabsTrigger value="courses">Courses</TabsTrigger>
+                  <TabsTrigger value="activity">Activity</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="students">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Student Distribution</CardTitle>
+                      <CardDescription>Status and fee breakdown from live data.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 sm:grid-cols-3">
+                      {(summary?.studentBreakdown || []).map((item) => (
+                        <div key={item.name} className="rounded-2xl border p-4">
+                          <div className="text-sm text-muted-foreground">{item.name}</div>
+                          <div className="mt-2 text-3xl font-bold">{item.value.toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="courses">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Courses</CardTitle>
+                      <CardDescription>Newest courses and their current scope.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(summary?.recentCourses || []).map((course) => (
+                        <div key={course._id} className="rounded-2xl border p-4">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <div className="font-semibold">{course.title}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {course.teacher?.name || course.teacher?.email || "Teacher"} • {course.scopeType || "general"}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="capitalize">{course.scopeType || "general"}</Badge>
+                          </div>
+                          <Separator className="my-3" />
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {course.classIds?.map((classItem) => (
+                              <Badge key={classItem._id} variant="outline">{classItem.name}</Badge>
+                            ))}
+                            {course.subjectIds?.map((subject) => (
+                              <Badge key={subject._id} variant="outline">
+                                {subject.code ? `${subject.code} - ` : ""}
+                                {subject.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="activity">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Activity</CardTitle>
+                      <CardDescription>Latest audit trail entries available to superadmin.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(summary?.recentLogs || []).map((log) => (
+                        <div key={log._id} className="rounded-2xl border p-4">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <div className="font-medium">{log.action}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {log.actorEmail || "system"} • {log.actorRole || "unknown"} • {log.target || "n/a"}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="rounded-full">
+                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Report Filters</CardTitle>
-          <CardDescription>Select date range and report parameters</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-date">Start Date</Label>
-              <Input id="start-date" type="date" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="end-date">End Date</Label>
-              <Input id="end-date" type="date" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="class-filter">Class</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Classes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Classes</SelectItem>
-                  <SelectItem value="grade-9">Grade 9</SelectItem>
-                  <SelectItem value="grade-10">Grade 10</SelectItem>
-                  <SelectItem value="grade-11">Grade 11</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">Apply Filters</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="finance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="courses">Courses</TabsTrigger>
-          <TabsTrigger value="exams">Exams</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="finance" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$145,000</div>
-                <p className="text-xs text-muted-foreground">+12% from last quarter</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$90,000</div>
-                <p className="text-xs text-muted-foreground">+8% from last quarter</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$55,000</div>
-                <p className="text-xs text-muted-foreground">+18% from last quarter</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Monthly Financial Report</CardTitle>
-                  <CardDescription>Fees vs expenses breakdown by month</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Fees Collected</TableHead>
-                    <TableHead>Expenses</TableHead>
-                    <TableHead>Profit</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {financeData.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{row.month}</TableCell>
-                      <TableCell>${row.fees.toLocaleString()}</TableCell>
-                      <TableCell>${row.expenses.toLocaleString()}</TableCell>
-                      <TableCell className="font-medium text-green-600">${row.profit.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="students" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Student Statistics</CardTitle>
-                  <CardDescription>Breakdown by status and category</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Download className="h-4 w-4" />
-                  Export Excel
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Count</TableHead>
-                    <TableHead>Percentage</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentReports.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{row.category}</TableCell>
-                      <TableCell>{row.count}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.percentage > 50 ? "default" : "secondary"}>{row.percentage}%</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          View List
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="courses" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Course Enrollment & Completion</CardTitle>
-                  <CardDescription>Track student progress across courses</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Download className="h-4 w-4" />
-                  Export PDF
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Course</TableHead>
-                    <TableHead>Enrolled</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead>Completion Rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {courseReports.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{row.course}</TableCell>
-                      <TableCell>{row.enrolled}</TableCell>
-                      <TableCell>{row.completed}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.completion >= 80 ? "default" : "secondary"}>{row.completion}%</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="exams" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Exam Grade Distribution</CardTitle>
-                  <CardDescription>Performance analytics across all exams</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Download className="h-4 w-4" />
-                  Export Report
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Exam</TableHead>
-                    <TableHead>Class</TableHead>
-                    <TableHead>Average</TableHead>
-                    <TableHead>Highest</TableHead>
-                    <TableHead>Lowest</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {examReports.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{row.exam}</TableCell>
-                      <TableCell>{row.class}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.average >= 75 ? "default" : "secondary"}>{row.average}%</Badge>
-                      </TableCell>
-                      <TableCell className="text-green-600 font-medium">{row.highest}%</TableCell>
-                      <TableCell className="text-red-600 font-medium">{row.lowest}%</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="attendance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Attendance Summary</CardTitle>
-                  <CardDescription>Daily and monthly attendance reports</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Download className="h-4 w-4" />
-                  Export Summary
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">92%</div>
-                  <div className="text-sm text-muted-foreground">Overall Attendance</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">1,086</div>
-                  <div className="text-sm text-muted-foreground">Present Today</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">94</div>
-                  <div className="text-sm text-muted-foreground">Absent Today</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">12</div>
-                  <div className="text-sm text-muted-foreground">Late Today</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
       </AdminLayout>
     </RoleGate>
-  )
+  );
 }

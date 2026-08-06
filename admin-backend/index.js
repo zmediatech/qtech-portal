@@ -37,6 +37,9 @@ const authRoutes = require("./routes/authRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
 const lmsRoutes = require("./routes/lmsRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
+const reportsRoutes = require("./routes/reportsRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
 
 const app = express();
 
@@ -111,6 +114,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/lms", lmsRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
 app.use("/uploads", express.static(require("path").join(__dirname, "uploads")));
 
 /* ------------------ 404 ------------------ */

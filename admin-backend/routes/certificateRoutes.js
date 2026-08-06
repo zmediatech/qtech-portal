@@ -4,6 +4,7 @@ const multer = require('multer');
 const router = express.Router();
 const requireAuth = require('../middleware/requireAuth');
 const requireRole = require('../middleware/requireRole');
+const { auditAction } = require('../middleware/auditTrail');
 const {
   makeCertificate,
   getAllCertificates,
@@ -19,7 +20,11 @@ const upload = multer({
 
 // POST /api/certificates/make
 // form-data: image(file), name(text), xPercent?, yPercent?, fontSize?, marginPt?, r?, g?, b?
-router.post('/make', requireAuth, requireRole('admin', 'teacher'), upload.single('image'), makeCertificate);
+router.post('/make', requireAuth, requireRole('admin', 'teacher'), auditAction('certificate.create', (req) => ({
+  studentId: req.body?.studentId,
+  classId: req.body?.classId,
+  title: req.body?.title,
+})), upload.single('image'), makeCertificate);
 router.get('/records', requireAuth, requireRole('admin', 'teacher'), getAllCertificates);
 router.get('/records/:certificateId/pdf', getCertificatePdf);
 router.get('/records/:certificateId', requireAuth, requireRole('admin', 'teacher'), getCertificateById);
