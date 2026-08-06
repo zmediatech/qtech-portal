@@ -29,6 +29,12 @@ type Course = {
   teacher?: { name?: string };
 };
 
+type SimpleItem = {
+  _id: string;
+  name?: string;
+  code?: string;
+};
+
 type OverviewStats = {
   students: number;
   teachers: number;
@@ -62,6 +68,8 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [schedule, setSchedule] = useState<Slot[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [classes, setClasses] = useState<SimpleItem[]>([]);
+  const [subjects, setSubjects] = useState<SimpleItem[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -87,16 +95,25 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
         setLoading(true);
         setError(null);
 
-        const [scheduleRes, coursesRes] = await Promise.all([
+        const [scheduleRes, coursesRes, classesRes, subjectsRes] = await Promise.all([
           fetch(apiUrl("/api/timetable-slots/me"), { headers: authHeaders(), cache: "no-store" }),
           fetch(apiUrl("/api/lms/courses"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/classes"), { headers: authHeaders(), cache: "no-store" }),
+          fetch(apiUrl("/api/subjects"), { headers: authHeaders(), cache: "no-store" }),
         ]);
 
-        const [scheduleJson, coursesJson] = await Promise.all([scheduleRes.json(), coursesRes.json()]);
+        const [scheduleJson, coursesJson, classesJson, subjectsJson] = await Promise.all([
+          scheduleRes.json(),
+          coursesRes.json(),
+          classesRes.json(),
+          subjectsRes.json(),
+        ]);
         if (!alive) return;
 
-        setSchedule(asArray<Slot>(scheduleJson));
+        setSchedule(Array.isArray(scheduleJson?.data?.slots) ? (scheduleJson.data.slots as Slot[]) : []);
         setCourses(asArray<Course>(coursesJson));
+        setClasses(asArray<SimpleItem>(classesJson));
+        setSubjects(asArray<SimpleItem>(subjectsJson));
       } catch (err: any) {
         if (!alive) return;
         setError(err?.message || "Unable to load dashboard");
@@ -172,9 +189,23 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
     groupedSchedule[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
-  const assignedClasses = (user?.assignedClasses || []).map(label);
-  const assignedSubjects = (user?.assignedSubjects || []).map(label);
-  const childClass = label(user?.studentClass);
+  const classNameById = new Map(classes.map((item) => [item._id, item.name || item._id]));
+  const subjectNameById = new Map(subjects.map((item) => [item._id, item.code ? `${item.code} - ${item.name || "Unnamed"}` : item.name || item._id]));
+  const displayAssignment = (value: unknown, lookup: Map<string, string>) => {
+    if (!value) return "None";
+    if (typeof value === "string") return lookup.get(value) || value;
+    if (typeof value === "object") {
+      const item = value as { _id?: string; name?: string; code?: string };
+      if (item._id && lookup.has(item._id)) return lookup.get(item._id) || item._id;
+      return item.code ? `${item.code} - ${item.name || "Unnamed"}` : item.name || item._id || "None";
+    }
+    return "None";
+  };
+  const displayAssignments = (items: unknown[], lookup: Map<string, string>) => {
+    if (!items.length) return "None assigned yet";
+    return items.map((item) => displayAssignment(item, lookup)).join(", ");
+  };
+  const childClass = displayAssignment(user?.studentClass, classNameById);
 
   const title = isSuperAdmin
     ? "Super Admin Control Center"
@@ -340,8 +371,8 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
                 {isTeacher && (
                   <>
                     <div className="space-y-2 text-sm text-slate-600">
-                      <p><span className="font-medium text-slate-900">Classes:</span> {assignedClasses.length ? assignedClasses.join(", ") : "None assigned yet"}</p>
-                      <p><span className="font-medium text-slate-900">Subjects:</span> {assignedSubjects.length ? assignedSubjects.join(", ") : "None assigned yet"}</p>
+                      <p><span className="font-medium text-slate-900">Classes:</span> {displayAssignments(user?.assignedClasses || [], classNameById)}</p>
+                      <p><span className="font-medium text-slate-900">Subjects:</span> {displayAssignments(user?.assignedSubjects || [], subjectNameById)}</p>
                     </div>
                     <Link href="/courses"><Button className="rounded-full">Create / Manage Courses</Button></Link>
                   </>
@@ -381,13 +412,19 @@ export function RoleDashboard({ role }: { role: SessionRole }) {
                   <div>
                     <div className="mb-1 font-medium text-slate-900">Classes</div>
                     <div className="flex flex-wrap gap-2">
-                      {assignedClasses.length ? assignedClasses.map((value) => <Badge key={value} variant="outline">{value}</Badge>) : <span className="text-slate-500">None</span>}
+                      {(user?.assignedClasses || []).length ? (user?.assignedClasses || []).map((value) => {
+                        const text = displayAssignment(value, classNameById);
+                        return <Badge key={typeof value === "string" ? value : (value as { _id?: string })._id || text} variant="outline">{text}</Badge>;
+                      }) : <span className="text-slate-500">None</span>}
                     </div>
                   </div>
                   <div>
                     <div className="mb-1 font-medium text-slate-900">Subjects</div>
                     <div className="flex flex-wrap gap-2">
-                      {assignedSubjects.length ? assignedSubjects.map((value) => <Badge key={value} variant="outline">{value}</Badge>) : <span className="text-slate-500">None</span>}
+                      {(user?.assignedSubjects || []).length ? (user?.assignedSubjects || []).map((value) => {
+                        const text = displayAssignment(value, subjectNameById);
+                        return <Badge key={typeof value === "string" ? value : (value as { _id?: string })._id || text} variant="outline">{text}</Badge>;
+                      }) : <span className="text-slate-500">None</span>}
                     </div>
                   </div>
                 </CardContent>
